@@ -22,12 +22,35 @@ Lightweight MQTT dashboard for Raspberry Pi 3 without Node-RED, InfluxDB, or Thi
   - `ph_status`, `ph_message`, `ph_action`
 - Realtime cards and history charts (24h / 7d)
 
-## Install (native)
+## ติดตั้งบน Raspberry Pi แบบละเอียด (Step by step)
+
+คู่มือนี้เหมาะกับ Raspberry Pi OS (Bookworm/Bullseye) และทดสอบกับ Pi 3 ได้
+
+### 1) เตรียมระบบปฏิบัติการ
 
 ```bash
 sudo apt update
-sudo apt install -y python3-venv python3-pip mosquitto mosquitto-clients
+sudo apt upgrade -y
+sudo apt install -y git python3-venv python3-pip mosquitto mosquitto-clients
+```
 
+ถ้าใช้ MQTT broker ภายนอก (เช่น `sci-iot.ddns.net`) ไม่จำเป็นต้องเปิด mosquitto ในเครื่องก็ได้
+
+### 2) วางโปรเจกต์ลงในเครื่อง Pi
+
+กรณีมี Git repository:
+
+```bash
+cd /opt
+sudo git clone <YOUR_REPO_URL> durian-dashboard
+sudo chown -R pi:pi /opt/durian-dashboard
+```
+
+กรณีไม่มี Git: คัดลอกโฟลเดอร์โปรเจกต์ไปที่ `/opt/durian-dashboard` แล้วตั้งสิทธิ์ให้ user `pi`
+
+### 3) สร้าง virtual environment และติดตั้ง dependencies
+
+```bash
 cd /opt/durian-dashboard
 python3 -m venv .venv
 source .venv/bin/activate
@@ -35,31 +58,120 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Run
+### 4) ตั้งค่า environment ของระบบ
+
+สร้างไฟล์ `.env` จากตัวอย่าง:
 
 ```bash
-source .venv/bin/activate
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8080
+cd /opt/durian-dashboard
+cp .env.example .env
 ```
 
-Open: `http://<pi-ip>:8080`
-
-The web app can start even if MQTT is not available yet. In that case the dashboard loads normally, but cards and charts stay empty until messages arrive on the configured topic.
-
-## Environment variables
+แก้ไฟล์ `.env` ให้ตรงกับหน้างาน:
 
 ```bash
-export MQTT_HOST=127.0.0.1
-export MQTT_PORT=1883
-export MQTT_TOPIC=durian_farm1/node_sensor
-export MQTT_QOS=1
+MQTT_HOST=sci-iot.ddns.net
+MQTT_PORT=1883
+MQTT_TOPIC=durian_farm1/node_sensor
+MQTT_QOS=1
 
-export DB_PATH=./data/durian_dashboard.db
-export RETAIN_DAYS=14
+DB_PATH=./data/durian_dashboard.db
+RETAIN_DAYS=14
 
-export APP_HOST=0.0.0.0
-export APP_PORT=8080
-export REFRESH_SECONDS=3
+APP_HOST=0.0.0.0
+APP_PORT=8080
+REFRESH_SECONDS=3
+```
+
+หมายเหตุ:
+- `RETAIN_DAYS` แนะนำ 7-14 วันสำหรับ Pi 3 เพื่อลดการเขียน SD card
+- ถ้าใช้ broker ในเครื่องเดียวกัน ให้เปลี่ยน `MQTT_HOST=127.0.0.1`
+
+### 5) ทดสอบรันแบบ manual ก่อน
+
+```bash
+cd /opt/durian-dashboard
+source .venv/bin/activate
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 1
+```
+
+เปิดจากเครื่องอื่นในเครือข่ายเดียวกัน:
+
+```text
+http://<PI_IP>:8080
+```
+
+ถ้า MQTT ยังไม่มา หน้าเว็บจะเปิดได้ปกติ แต่ข้อมูล card/chart จะยังว่างจนกว่าจะมี message เข้า topic
+
+### 6) ตั้งให้รันอัตโนมัติด้วย systemd
+
+โปรเจกต์มีไฟล์ service ให้แล้วที่ `systemd/durian-dashboard.service`
+
+คัดลอก service ไปที่ระบบ:
+
+```bash
+sudo cp /opt/durian-dashboard/systemd/durian-dashboard.service /etc/systemd/system/durian-dashboard.service
+```
+
+ตรวจค่าใน service ให้ตรงเครื่องจริง (สำคัญ):
+- `User=pi`
+- `Group=pi`
+- `WorkingDirectory=/opt/durian-dashboard`
+- `ExecStart=/opt/durian-dashboard/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 1`
+
+เปิดใช้งาน service:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable durian-dashboard
+sudo systemctl start durian-dashboard
+sudo systemctl status durian-dashboard
+```
+
+### 7) คำสั่งตรวจสอบและแก้ปัญหาเบื้องต้น
+
+ดู log แบบเรียลไทม์:
+
+```bash
+sudo journalctl -u durian-dashboard -f
+```
+
+รีสตาร์ต service หลังแก้ค่า:
+
+```bash
+sudo systemctl restart durian-dashboard
+```
+
+ตรวจพอร์ต 8080:
+
+```bash
+sudo ss -tulpn | grep 8080
+```
+
+### 8) การอัปเดตโปรเจกต์ในอนาคต
+
+```bash
+cd /opt/durian-dashboard
+git pull
+source .venv/bin/activate
+pip install -r requirements.txt
+sudo systemctl restart durian-dashboard
+```
+
+## Environment variables (reference)
+
+ค่าที่รองรับในระบบ:
+
+```bash
+MQTT_HOST
+MQTT_PORT
+MQTT_TOPIC
+MQTT_QOS
+DB_PATH
+RETAIN_DAYS
+APP_HOST
+APP_PORT
+REFRESH_SECONDS
 ```
 
 ## API
@@ -93,17 +205,6 @@ export REFRESH_SECONDS=3
     "k": 120
   }
 }
-```
-
-## Production service (systemd)
-
-Copy `systemd/durian-dashboard.service` to `/etc/systemd/system/durian-dashboard.service` and adjust `WorkingDirectory`/`User`.
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable durian-dashboard
-sudo systemctl start durian-dashboard
-sudo systemctl status durian-dashboard
 ```
 
 ## Notes for Pi3
