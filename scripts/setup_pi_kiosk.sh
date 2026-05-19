@@ -221,7 +221,7 @@ fi
 # Keep browser alive if it gets closed.
 while true; do
   "\$BROWSER" \
-    --kiosk \
+    --new-window \
     --incognito \
     --noerrdialogs \
     --disable-session-crashed-bubble \

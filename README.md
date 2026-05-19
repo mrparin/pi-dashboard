@@ -26,51 +26,19 @@ Lightweight MQTT dashboard for Raspberry Pi 3 without Node-RED, InfluxDB, or Thi
 
 คู่มือนี้เหมาะกับ Raspberry Pi OS (Bookworm/Bullseye) และทดสอบกับ Pi 3 ได้
 
-### ติดตั้งแบบคำสั่งเดียว (แนะนำสำหรับงานติดตั้งหน้างาน)
-
-ถ้าต้องการให้เครื่องบูตแล้วเปิด Dashboard อัตโนมัติแบบ Kiosk (Chromium) พร้อมตั้งจอดับเมื่อไม่มีการแตะ 1 ชั่วโมง ให้ใช้สคริปต์นี้:
-
-```bash
-cd /opt/durian-dashboard
-sudo bash scripts/setup_pi_kiosk.sh
-```
-
-เมื่อรันคำสั่งนี้ ระบบจะถามค่าก่อนเริ่มติดตั้ง (interactive) เช่น user, URL และเวลา timeout ของจอ
-
-ถ้าต้องการรันแบบไม่ถามคำถาม ให้ใช้:
-
-```bash
-cd /opt/durian-dashboard
-sudo bash scripts/setup_pi_kiosk.sh --yes
-```
-
-สคริปต์จะทำงานให้ครบดังนี้:
-- ติดตั้งแพ็กเกจที่จำเป็น (`python3-venv`, `python3-pip`, `curl`, `unclutter`, `chromium`)
-- สร้าง/อัปเดต `.venv` และติดตั้ง dependencies จาก `requirements.txt`
-- ติดตั้งและเปิดใช้งาน `durian-dashboard.service` ให้เริ่มอัตโนมัติหลังบูต
-- ตั้ง Desktop Autologin (ถ้า `raspi-config` รองรับ non-interactive)
-- สร้าง Kiosk launcher และ autostart ให้เปิด Chromium หน้า Dashboard อัตโนมัติ
-- ตั้ง timeout จอเป็น 1 ชั่วโมง (`3600` วินาที) และแตะจอเพื่อปลุกได้
-
-เสร็จแล้วรีบูต:
-
-```bash
-sudo reboot
-```
-
-### 1) เตรียมระบบปฏิบัติการ
+## 1) เตรียมเครื่องครั้งแรก (ทำครั้งเดียว)
 
 ```bash
 sudo apt update
 sudo apt upgrade -y
-sudo apt install -y git python3-venv python3-pip mosquitto mosquitto-clients
+sudo apt install -y git
 ```
 
 ถ้าใช้ MQTT broker ภายนอก (เช่น `sci-iot.ddns.net`) ไม่จำเป็นต้องเปิด mosquitto ในเครื่องก็ได้
 
-### 2) วางโปรเจกต์ลงในเครื่อง Pi
+## 2) ดึงโปรเจกต์ลงเครื่อง Pi
 
-กรณีมี Git repository:
+กรณี clone ครั้งแรก:
 
 ```bash
 cd /opt
@@ -78,28 +46,40 @@ sudo git clone <YOUR_REPO_URL> durian-dashboard
 sudo chown -R pi:pi /opt/durian-dashboard
 ```
 
-กรณีไม่มี Git: คัดลอกโฟลเดอร์โปรเจกต์ไปที่ `/opt/durian-dashboard` แล้วตั้งสิทธิ์ให้ user `pi`
+กรณีมีโฟลเดอร์เดิมอยู่แล้ว ให้ข้ามไปขั้นตอนอัปเดตเวอร์ชัน
 
-### 3) สร้าง virtual environment และติดตั้ง dependencies
+## 3) อัปเดตเวอร์ชันใหม่จาก GitHub (แทนของเดิม)
 
 ```bash
 cd /opt/durian-dashboard
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
+git status
+git pull origin main
 ```
 
-### 4) ตั้งค่า environment ของระบบ
+ถ้า repository ใช้ branch `master` ให้เปลี่ยนคำสั่งเป็น:
 
-สร้างไฟล์ `.env` จากตัวอย่าง:
+```bash
+git pull origin master
+```
+
+ถ้า `git pull` ติดเพราะมีไฟล์แก้ค้าง:
+
+```bash
+git stash
+git pull origin main
+git stash pop
+```
+
+## 4) ตั้งค่า `.env` ให้ตรงหน้างาน
+
+สร้างไฟล์จากตัวอย่าง (ครั้งแรก):
 
 ```bash
 cd /opt/durian-dashboard
 cp .env.example .env
 ```
 
-แก้ไฟล์ `.env` ให้ตรงกับหน้างาน:
+ตัวอย่างค่าที่ควรตรวจ:
 
 ```bash
 MQTT_HOST=sci-iot.ddns.net
@@ -117,50 +97,73 @@ REFRESH_SECONDS=3
 
 หมายเหตุ:
 - `RETAIN_DAYS` แนะนำ 7-14 วันสำหรับ Pi 3 เพื่อลดการเขียน SD card
-- ถ้าใช้ broker ในเครื่องเดียวกัน ให้เปลี่ยน `MQTT_HOST=127.0.0.1`
+- ถ้าใช้ broker ในเครื่องเดียวกัน ให้ใช้ `MQTT_HOST=127.0.0.1`
 
-### 5) ทดสอบรันแบบ manual ก่อน
+## 5) รันสคริปต์ติดตั้งอัตโนมัติ (แนะนำ)
+
+สคริปต์อยู่ที่ `scripts/setup_pi_kiosk.sh` และจะทำครบทั้ง backend service + desktop autostart + browser autostart + screen timeout
+
+### แบบถามคำถามก่อนติดตั้ง (interactive)
 
 ```bash
 cd /opt/durian-dashboard
-source .venv/bin/activate
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 1
+sudo bash scripts/setup_pi_kiosk.sh
 ```
 
-เปิดจากเครื่องอื่นในเครือข่ายเดียวกัน:
+ระบบจะถามค่า เช่น:
+- Project directory
+- Linux user (เช่น `pi`)
+- Dashboard URL (ปกติใช้ `http://127.0.0.1:8080`)
+- Screen timeout (วินาที) โดยค่าแนะนำคือ `3600`
 
-```text
-http://<PI_IP>:8080
-```
-
-ถ้า MQTT ยังไม่มา หน้าเว็บจะเปิดได้ปกติ แต่ข้อมูล card/chart จะยังว่างจนกว่าจะมี message เข้า topic
-
-### 6) ตั้งให้รันอัตโนมัติด้วย systemd
-
-โปรเจกต์มีไฟล์ service ให้แล้วที่ `systemd/durian-dashboard.service`
-
-คัดลอก service ไปที่ระบบ:
+### แบบไม่ถามคำถาม (non-interactive)
 
 ```bash
-sudo cp /opt/durian-dashboard/systemd/durian-dashboard.service /etc/systemd/system/durian-dashboard.service
+cd /opt/durian-dashboard
+sudo bash scripts/setup_pi_kiosk.sh --yes
 ```
 
-ตรวจค่าใน service ให้ตรงเครื่องจริง (สำคัญ):
-- `User=pi`
-- `Group=pi`
-- `WorkingDirectory=/opt/durian-dashboard`
-- `ExecStart=/opt/durian-dashboard/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 1`
-
-เปิดใช้งาน service:
+## 6) รีบูตและตรวจผลหลังติดตั้ง
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable durian-dashboard
-sudo systemctl start durian-dashboard
-sudo systemctl status durian-dashboard
+sudo reboot
 ```
 
-### 7) คำสั่งตรวจสอบและแก้ปัญหาเบื้องต้น
+หลังเครื่องกลับมา:
+
+```bash
+sudo systemctl status durian-dashboard --no-pager
+sudo ss -tulpn | grep 8080
+```
+
+สิ่งที่ต้องได้:
+- service `durian-dashboard` เป็น `active (running)`
+- Chromium เปิดหน้า dashboard อัตโนมัติแบบหน้าต่างปกติ (ไม่เต็มจอ)
+- จอ idle 1 ชั่วโมงแล้วดับ และแตะจอแล้วติดกลับ
+
+## 7) ทดสอบเร็ว 20 วินาที (ก่อนใช้งานจริง)
+
+```bash
+export DISPLAY=:0
+export XAUTHORITY=/home/pi/.Xauthority
+xset s 20 0
+xset +dpms
+xset dpms 20 20 20
+```
+
+ทดสอบ:
+- ปล่อยไว้ประมาณ 20 วินาที จอต้องดับ
+- แตะหน้าจอ จอต้องติดกลับ
+
+คืนค่าจริง 1 ชั่วโมง:
+
+```bash
+xset s 3600 0
+xset +dpms
+xset dpms 3600 3600 3600
+```
+
+## 8) คำสั่งตรวจสอบและแก้ปัญหาเบื้องต้น
 
 ดู log แบบเรียลไทม์:
 
@@ -174,19 +177,19 @@ sudo journalctl -u durian-dashboard -f
 sudo systemctl restart durian-dashboard
 ```
 
-ตรวจพอร์ต 8080:
+ถ้า Chromium ไม่เปิดอัตโนมัติ ให้ตรวจไฟล์เหล่านี้:
+- `scripts/setup_pi_kiosk.sh`
+- `/home/pi/start-dashboard-kiosk.sh`
+- `/home/pi/.config/autostart/dashboard-kiosk.desktop`
 
-```bash
-sudo ss -tulpn | grep 8080
-```
+## 9) อัปเดตโปรเจกต์รอบถัดไป
 
-### 8) การอัปเดตโปรเจกต์ในอนาคต
+ทุกครั้งที่มี release ใหม่จาก GitHub:
 
 ```bash
 cd /opt/durian-dashboard
-git pull
-source .venv/bin/activate
-pip install -r requirements.txt
+git pull origin main
+sudo bash scripts/setup_pi_kiosk.sh --yes
 sudo systemctl restart durian-dashboard
 ```
 
