@@ -26,6 +26,29 @@ Lightweight MQTT dashboard for Raspberry Pi 3 without Node-RED, InfluxDB, or Thi
 
 คู่มือนี้เหมาะกับ Raspberry Pi OS (Bookworm/Bullseye) และทดสอบกับ Pi 3 ได้
 
+### ติดตั้งแบบคำสั่งเดียว (แนะนำสำหรับงานติดตั้งหน้างาน)
+
+ถ้าต้องการให้เครื่องบูตแล้วเปิด Dashboard อัตโนมัติแบบ Kiosk (Chromium) พร้อมตั้งจอดับเมื่อไม่มีการแตะ 1 ชั่วโมง ให้ใช้สคริปต์นี้:
+
+```bash
+cd /opt/durian-dashboard
+sudo bash scripts/setup_pi_kiosk.sh
+```
+
+สคริปต์จะทำงานให้ครบดังนี้:
+- ติดตั้งแพ็กเกจที่จำเป็น (`python3-venv`, `python3-pip`, `curl`, `unclutter`, `chromium`)
+- สร้าง/อัปเดต `.venv` และติดตั้ง dependencies จาก `requirements.txt`
+- ติดตั้งและเปิดใช้งาน `durian-dashboard.service` ให้เริ่มอัตโนมัติหลังบูต
+- ตั้ง Desktop Autologin (ถ้า `raspi-config` รองรับ non-interactive)
+- สร้าง Kiosk launcher และ autostart ให้เปิด Chromium หน้า Dashboard อัตโนมัติ
+- ตั้ง timeout จอเป็น 1 ชั่วโมง (`3600` วินาที) และแตะจอเพื่อปลุกได้
+
+เสร็จแล้วรีบูต:
+
+```bash
+sudo reboot
+```
+
 ### 1) เตรียมระบบปฏิบัติการ
 
 ```bash
