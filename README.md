@@ -35,6 +35,15 @@ cd /opt/durian-dashboard
 sudo bash scripts/setup_pi_kiosk.sh
 ```
 
+เมื่อรันคำสั่งนี้ ระบบจะถามค่าก่อนเริ่มติดตั้ง (interactive) เช่น user, URL และเวลา timeout ของจอ
+
+ถ้าต้องการรันแบบไม่ถามคำถาม ให้ใช้:
+
+```bash
+cd /opt/durian-dashboard
+sudo bash scripts/setup_pi_kiosk.sh --yes
+```
+
 สคริปต์จะทำงานให้ครบดังนี้:
 - ติดตั้งแพ็กเกจที่จำเป็น (`python3-venv`, `python3-pip`, `curl`, `unclutter`, `chromium`)
 - สร้าง/อัปเดต `.venv` และติดตั้ง dependencies จาก `requirements.txt`

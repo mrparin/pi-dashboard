@@ -4,14 +4,16 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-/opt/durian-dashboard}"
 SERVICE_NAME="${SERVICE_NAME:-durian-dashboard}"
 PI_USER="${PI_USER:-pi}"
-PI_HOME="${PI_HOME:-/home/$PI_USER}"
-SERVICE_SRC="$APP_DIR/systemd/$SERVICE_NAME.service"
-SERVICE_DST="/etc/systemd/system/$SERVICE_NAME.service"
-KIOSK_SCRIPT="$PI_HOME/start-dashboard-kiosk.sh"
-AUTOSTART_DIR="$PI_HOME/.config/autostart"
-AUTOSTART_FILE="$AUTOSTART_DIR/dashboard-kiosk.desktop"
 SCREEN_TIMEOUT="${SCREEN_TIMEOUT:-3600}"
 DASHBOARD_URL="${DASHBOARD_URL:-http://127.0.0.1:8080}"
+ASSUME_YES=0
+
+PI_HOME=""
+SERVICE_SRC=""
+SERVICE_DST=""
+KIOSK_SCRIPT=""
+AUTOSTART_DIR=""
+AUTOSTART_FILE=""
 
 log() {
   echo "[setup] $*"
@@ -24,6 +26,112 @@ warn() {
 die() {
   echo "[setup][error] $*" >&2
   exit 1
+}
+
+refresh_paths() {
+  PI_HOME="${PI_HOME:-/home/$PI_USER}"
+  SERVICE_SRC="$APP_DIR/systemd/$SERVICE_NAME.service"
+  SERVICE_DST="/etc/systemd/system/$SERVICE_NAME.service"
+  KIOSK_SCRIPT="$PI_HOME/start-dashboard-kiosk.sh"
+  AUTOSTART_DIR="$PI_HOME/.config/autostart"
+  AUTOSTART_FILE="$AUTOSTART_DIR/dashboard-kiosk.desktop"
+}
+
+show_help() {
+  cat <<EOF
+Usage: sudo bash scripts/setup_pi_kiosk.sh [options]
+
+Options:
+  --yes, -y            Run non-interactive with current/default values
+  --help, -h           Show this help text
+
+Environment overrides:
+  APP_DIR, SERVICE_NAME, PI_USER, PI_HOME, SCREEN_TIMEOUT, DASHBOARD_URL
+EOF
+}
+
+parse_args() {
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --yes|-y)
+        ASSUME_YES=1
+        ;;
+      --help|-h)
+        show_help
+        exit 0
+        ;;
+      *)
+        die "Unknown option: $1"
+        ;;
+    esac
+    shift
+  done
+}
+
+is_tty() {
+  [ -t 0 ] && [ -t 1 ]
+}
+
+prompt_with_default() {
+  local label="$1"
+  local current="$2"
+  local answer
+  read -r -p "$label [$current]: " answer
+  if [ -n "$answer" ]; then
+    echo "$answer"
+  else
+    echo "$current"
+  fi
+}
+
+prompt_yes_no() {
+  local label="$1"
+  local default="$2"
+  local answer
+
+  read -r -p "$label [$default]: " answer
+  answer="${answer:-$default}"
+  case "$answer" in
+    y|Y|yes|YES)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+collect_inputs() {
+  if [ "$ASSUME_YES" -eq 1 ] || ! is_tty; then
+    return
+  fi
+
+  echo
+  echo "=== Durian Dashboard Kiosk Setup (Interactive) ==="
+  echo "Press Enter to use default values shown in [brackets]."
+  echo
+
+  APP_DIR="$(prompt_with_default "Project directory" "$APP_DIR")"
+  PI_USER="$(prompt_with_default "Linux user for desktop autostart" "$PI_USER")"
+  PI_HOME="$(prompt_with_default "Home directory for that user" "/home/$PI_USER")"
+  SERVICE_NAME="$(prompt_with_default "Systemd service name" "$SERVICE_NAME")"
+  DASHBOARD_URL="$(prompt_with_default "Dashboard URL for kiosk" "$DASHBOARD_URL")"
+  SCREEN_TIMEOUT="$(prompt_with_default "Screen timeout in seconds" "$SCREEN_TIMEOUT")"
+
+  refresh_paths
+
+  echo
+  echo "Selected values:"
+  echo "- APP_DIR=$APP_DIR"
+  echo "- PI_USER=$PI_USER"
+  echo "- PI_HOME=$PI_HOME"
+  echo "- SERVICE_NAME=$SERVICE_NAME"
+  echo "- DASHBOARD_URL=$DASHBOARD_URL"
+  echo "- SCREEN_TIMEOUT=$SCREEN_TIMEOUT"
+
+  if ! prompt_yes_no "Continue setup" "y"; then
+    die "Cancelled by user"
+  fi
 }
 
 require_root() {
@@ -164,7 +272,10 @@ print_summary() {
 }
 
 main() {
+  parse_args "$@"
   require_root
+  refresh_paths
+  collect_inputs
   require_paths
   install_packages
   setup_python_env
