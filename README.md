@@ -103,6 +103,29 @@ REFRESH_SECONDS=3
 
 สคริปต์อยู่ที่ `scripts/setup_pi_kiosk.sh` และจะทำครบทั้ง backend service + desktop autostart + browser autostart + screen timeout
 
+ถ้าติดตั้งบน server อื่นและต้องการเฉพาะ backend service (ไม่เปิด browser อัตโนมัติ) ให้ใช้ `scripts/setup_pi_service_only.sh`
+
+### แบบ service-only (ไม่เปิด browser อัตโนมัติ)
+
+แบบถามคำถามก่อนติดตั้ง:
+
+```bash
+cd /opt/durian-dashboard
+sudo bash scripts/setup_pi_service_only.sh
+```
+
+แบบไม่ถามคำถาม:
+
+```bash
+cd /opt/durian-dashboard
+sudo bash scripts/setup_pi_service_only.sh --yes
+```
+
+สคริปต์นี้จะติดตั้งเฉพาะ:
+- Python runtime dependencies และ virtual environment
+- `durian-dashboard.service` ให้เริ่มอัตโนมัติหลังบูต
+- ไม่แตะค่า desktop/autologin และไม่สร้าง browser autostart
+
 ### แบบถามคำถามก่อนติดตั้ง (interactive)
 
 ```bash
