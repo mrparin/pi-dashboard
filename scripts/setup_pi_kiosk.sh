@@ -229,8 +229,8 @@ fi
 # Keep browser alive if it gets closed.
 while true; do
   "\$BROWSER" \
-    --kiosk \
-    --app="\$URL" \
+    --new-window \
+    --incognito \
     --no-first-run \
     --disable-gpu \
     --disable-extensions \
@@ -240,6 +240,7 @@ while true; do
     --noerrdialogs \
     --disable-session-crashed-bubble \
     --check-for-update-interval=31536000 \
+    "\$URL" \
     >/tmp/durian-kiosk-browser.log 2>&1 &
 
   BROWSER_PID=\$!
