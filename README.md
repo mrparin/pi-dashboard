@@ -220,6 +220,40 @@ REFRESH_SECONDS
 }
 ```
 
+
+## Next steps (Post-install verification)
+
+1. Reboot the device:
+  ```bash
+  sudo reboot
+  ```
+2. After boot, verify the service is running:
+  ```bash
+  sudo systemctl status durian-dashboard --no-pager
+  ```
+3. Verify the web port is open:
+  ```bash
+  sudo ss -tulpn | grep 8080
+  ```
+
+### Optional: Quick screen timeout test (20 seconds)
+
+```bash
+export DISPLAY=:0
+export XAUTHORITY=/home/pi/.Xauthority
+xset s 20 0
+xset +dpms
+xset dpms 20 20 20
+```
+
+### Restore 1-hour screen timeout
+
+```bash
+xset s 3600 0
+xset +dpms
+xset dpms 3600 3600 3600
+```
+
 ## Notes for Pi3
 
 - Keep retention low (7-14 days) to protect SD card.
