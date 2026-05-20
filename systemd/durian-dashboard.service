@@ -13,7 +13,7 @@ Environment=MQTT_PORT=1883
 Environment=MQTT_TOPIC=durian_farm1/node_sensor
 Environment=MQTT_QOS=1
 Environment=DB_PATH=/opt/durian-dashboard/data/durian_dashboard.db
-Environment=RETAIN_DAYS=14
+Environment=RETAIN_DAYS=90
 Environment=REFRESH_SECONDS=3
 ExecStart=/opt/durian-dashboard/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 1
 Restart=always

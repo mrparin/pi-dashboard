@@ -22,6 +22,43 @@ Lightweight MQTT dashboard for Raspberry Pi 3 without Node-RED, InfluxDB, or Thi
   - `ph_status`, `ph_message`, `ph_action`
 - Realtime cards and history charts (24h / 7d)
 
+## การรันบนเครื่อง PC (Windows) เพื่อทดสอบ
+
+ใช้ขั้นตอนนี้เมื่อต้องการทดสอบแอปบนเครื่องคอมพิวเตอร์ทั่วไป (ไม่ใช่ Raspberry Pi)
+
+1) เปิด PowerShell และเข้าโฟลเดอร์โปรเจกต์
+
+```powershell
+cd C:\Users\parinya_j\Documents\GitHub\pi-dashboard
+```
+
+2) สร้าง virtual environment (ครั้งแรกเท่านั้น)
+
+```powershell
+py -3 -m venv .venv
+```
+
+3) ติดตั้ง dependencies
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+4) รันแอป
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8080
+```
+
+5) เปิดหน้าเว็บทดสอบ
+
+- Dashboard: http://127.0.0.1:8080
+- Latest API: http://127.0.0.1:8080/api/latest
+
+6) หยุดแอป
+
+กด `Ctrl + C` ในหน้าต่าง PowerShell ที่กำลังรัน Uvicorn
+
 ## คู่มือการติดตั้งและอัปเดต
 
 ### 1) การติดตั้งลงใน Raspberry Pi
@@ -74,7 +111,7 @@ pkill -f "chromium|chromium-browser"
 
 หมายเหตุ:
 - ถ้าหน้างานไม่ได้ใช้ broker ในเครื่องเดียวกัน ให้ตั้ง `MQTT_HOST` เป็น broker ปลายทาง
-- สำหรับ Pi 3 แนะนำ `RETAIN_DAYS=7-14` เพื่อลดการเขียน SD card
+- ถ้าเก็บข้อมูลจริงไว้ที่ server อยู่แล้ว แนะนำตั้ง `RETAIN_DAYS=90` (เก็บ local cache 3 เดือน)
 
 ### 2) การ update software จาก git ใหม่
 
@@ -187,6 +224,12 @@ APP_PORT
 REFRESH_SECONDS
 ```
 
+### Data retention policy (local cache)
+
+- ค่าแนะนำสำหรับหน้างานที่มีข้อมูลหลักอยู่บน server: `RETAIN_DAYS=90`
+- ระบบจะลบข้อมูลที่เก่ากว่า `RETAIN_DAYS` อัตโนมัติระหว่างรัน (ตรวจทุก ~1 ชั่วโมง)
+- สามารถปรับในไฟล์ `.env` ได้ตามต้องการ
+
 ## API
 
 - `GET /api/latest`
@@ -220,8 +263,42 @@ REFRESH_SECONDS
 }
 ```
 
+
+## Next steps (Post-install verification)
+
+1. Reboot the device:
+  ```bash
+  sudo reboot
+  ```
+2. After boot, verify the service is running:
+  ```bash
+  sudo systemctl status durian-dashboard --no-pager
+  ```
+3. Verify the web port is open:
+  ```bash
+  sudo ss -tulpn | grep 8080
+  ```
+
+### Optional: Quick screen timeout test (20 seconds)
+
+```bash
+export DISPLAY=:0
+export XAUTHORITY=/home/pi/.Xauthority
+xset s 20 0
+xset +dpms
+xset dpms 20 20 20
+```
+
+### Restore 1-hour screen timeout
+
+```bash
+xset s 3600 0
+xset +dpms
+xset dpms 3600 3600 3600
+```
+
 ## Notes for Pi3
 
-- Keep retention low (7-14 days) to protect SD card.
+- If upstream server stores long-term data, keep local cache at `RETAIN_DAYS=90`.
 - Use one Uvicorn worker.
 - Keep MQTT publish interval at 1-5 minutes.
