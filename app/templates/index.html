@@ -4,13 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Durian Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="/static/style.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
     <header class="topbar">
       <div>
-        <h1>สวนพรรณมณี</h1>
+        <h1><i class="bi bi-tree-fill" aria-hidden="true"></i> สวนพรรณมณี</h1>
         <p class="sub">Realtime MQTT topic: {{ topic }}</p>
       </div>
       <span id="updatedAt" class="badge">Waiting for data...</span>
@@ -18,36 +19,36 @@
 
     <main class="layout">
       <section class="panel grouped-panel air-group">
-        <h2 class="group-title">สภาพแวดล้อมอากาศ (Air Environment)</h2>
+        <h2 class="group-title"><i class="bi bi-cloud-sun-fill" aria-hidden="true"></i> สภาพแวดล้อมอากาศ (Air Environment)</h2>
         <div class="kpi-grid">
-          <article class="kpi"><h3>Air Temp</h3><p id="air_temp">-</p><small>C</small></article>
-          <article class="kpi"><h3>Air Humidity</h3><p id="air_humi">-</p><small>%RH</small></article>
-          <article class="kpi"><h3>VPD</h3><p id="vpd_kpa">-</p><small>kPa</small></article>
-          <article class="kpi"><h3>Wind Speed</h3><p id="wind_speed_avg5m">-</p><small>m/s</small></article>
-          <article class="kpi"><h3>Solar Energy</h3><p id="solar_wm2_est">-</p><small>W/m2</small></article>
-          <article class="kpi"><h3>Light Intensity</h3><p id="lux">-</p><small>lux</small></article>
+          <article class="kpi"><h3><i class="bi bi-thermometer-half" aria-hidden="true"></i> Air Temp</h3><p id="air_temp">-</p><small>C</small></article>
+          <article class="kpi"><h3><i class="bi bi-droplet-half" aria-hidden="true"></i> Air Humidity</h3><p id="air_humi">-</p><small>%RH</small></article>
+          <article class="kpi"><h3><i class="bi bi-speedometer2" aria-hidden="true"></i> VPD</h3><p id="vpd_kpa">-</p><small>kPa</small></article>
+          <article class="kpi"><h3><i class="bi bi-wind" aria-hidden="true"></i> Wind Speed</h3><p id="wind_speed_avg5m">-</p><small>m/s</small></article>
+          <article class="kpi"><h3><i class="bi bi-brightness-high" aria-hidden="true"></i> Solar Energy</h3><p id="solar_wm2_est">-</p><small>W/m2</small></article>
+          <article class="kpi"><h3><i class="bi bi-sun" aria-hidden="true"></i> Light Intensity</h3><p id="lux">-</p><small>lux</small></article>
         </div>
       </section>
 
       <section class="panel grouped-panel soil-group">
-        <h2 class="group-title">สภาพแวดล้อมดิน (Soil Environment)</h2>
+        <h2 class="group-title"><i class="bi bi-moisture" aria-hidden="true"></i> สภาพแวดล้อมดิน (Soil Environment)</h2>
         <div class="kpi-grid">
-          <article class="kpi"><h3>Soil Temp</h3><p id="soil_temp">-</p><small>C</small></article>
-          <article class="kpi"><h3>Soil Moisture</h3><p id="soil_humi">-</p><small>%</small></article>
-          <article class="kpi"><h3>Soil pH</h3><p id="ph">-</p><small>pH</small></article>
-          <article class="kpi"><h3>EC</h3><p id="ec">-</p><small>mS/cm</small></article>
+          <article class="kpi"><h3><i class="bi bi-thermometer-half" aria-hidden="true"></i> Soil Temp</h3><p id="soil_temp">-</p><small>C</small></article>
+          <article class="kpi"><h3><i class="bi bi-water" aria-hidden="true"></i> Soil Moisture</h3><p id="soil_humi">-</p><small>%</small></article>
+          <article class="kpi"><h3><i class="bi bi-activity" aria-hidden="true"></i> Soil pH</h3><p id="ph">-</p><small>pH</small></article>
+          <article class="kpi"><h3><i class="bi bi-lightning-charge" aria-hidden="true"></i> EC</h3><p id="ec">-</p><small>mS/cm</small></article>
         </div>
       </section>
 
       <section class="panel status-grid">
         <article class="status-card" id="vpdCard">
-          <h3>VPD Status</h3>
+          <h3><i class="bi bi-heart-pulse" aria-hidden="true"></i> VPD Status</h3>
           <p class="level" id="vpd_status">-</p>
           <p id="vpd_message">-</p>
           <p class="action" id="vpd_action">-</p>
         </article>
         <article class="status-card" id="phCard">
-          <h3>pH Status</h3>
+          <h3><i class="bi bi-bezier2" aria-hidden="true"></i> pH Status</h3>
           <p class="level" id="ph_status">-</p>
           <p id="ph_message">-</p>
           <p class="action" id="ph_action">-</p>
@@ -56,22 +57,22 @@
 
       <section class="panel chart-grid">
         <div class="chart-card">
-          <h3>VPD Last 24h</h3>
+          <h3><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> VPD Last 24h</h3>
           <canvas id="vpdChart"></canvas>
         </div>
         <div class="chart-card">
-          <h3>pH Last 7d</h3>
+          <h3><i class="bi bi-graph-up" aria-hidden="true"></i> pH Last 7d</h3>
           <canvas id="phChart"></canvas>
         </div>
       </section>
 
       <section class="panel chart-grid">
         <div class="chart-card">
-          <h3>แนวโน้มอุณหภูมิและความชื้นอากาศ (24h)</h3>
+          <h3><i class="bi bi-cloud-drizzle" aria-hidden="true"></i> แนวโน้มอุณหภูมิและความชื้นอากาศ (24h)</h3>
           <canvas id="airTrendChart"></canvas>
         </div>
         <div class="chart-card">
-          <h3>แนวโน้มอุณหภูมิและความชื้นดิน (24h)</h3>
+          <h3><i class="bi bi-flower1" aria-hidden="true"></i> แนวโน้มอุณหภูมิและความชื้นดิน (24h)</h3>
           <canvas id="soilTrendChart"></canvas>
         </div>
       </section>
