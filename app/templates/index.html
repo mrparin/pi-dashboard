@@ -76,6 +76,25 @@
           <canvas id="soilTrendChart"></canvas>
         </div>
       </section>
+
+      <!-- Weather Forecast Section -->
+      <section class="panel weather-panel">
+        <div class="weather-header">
+          <h2 class="group-title"><i class="bi bi-cloud-sun-fill" aria-hidden="true"></i> พยากรณ์อากาศ 7 วัน</h2>
+          <div class="weather-search-wrap">
+            <div class="weather-search-box">
+              <i class="bi bi-geo-alt-fill weather-search-icon" aria-hidden="true"></i>
+              <input type="text" id="weatherSearchInput" class="weather-search-input"
+                     placeholder="ค้นหาพื้นที่ เช่น นายายอาม จันทบุรี" autocomplete="off" />
+            </div>
+            <ul id="weatherSearchResults" class="weather-search-results hidden"></ul>
+          </div>
+          <span id="weatherLocationName" class="weather-location-badge hidden"></span>
+        </div>
+        <div id="weatherForecast" class="weather-forecast-grid">
+          <p class="weather-empty">กรุณาค้นหาและเลือกพื้นที่เพื่อดูพยากรณ์อากาศ</p>
+        </div>
+      </section>
     </main>
 
     <footer class="footer">
@@ -328,6 +347,139 @@
 
       refreshTrendCharts();
       setInterval(refreshTrendCharts, Math.max(60, refreshSeconds * 20) * 1000);
+
+      // ── Weather Forecast ────────────────────────────────────────────────────
+      const WMO_ICONS = {
+        0: "bi-sun", 1: "bi-sun", 2: "bi-cloud-sun", 3: "bi-cloud",
+        45: "bi-cloud-fog2", 48: "bi-cloud-fog2",
+        51: "bi-cloud-drizzle", 53: "bi-cloud-drizzle", 55: "bi-cloud-drizzle",
+        61: "bi-cloud-rain", 63: "bi-cloud-rain", 65: "bi-cloud-rain-heavy",
+        71: "bi-snow", 73: "bi-snow", 75: "bi-snow", 77: "bi-snow",
+        80: "bi-cloud-rain", 81: "bi-cloud-rain", 82: "bi-cloud-rain-heavy",
+        85: "bi-snow", 86: "bi-snow",
+        95: "bi-cloud-lightning-rain", 96: "bi-cloud-lightning-rain", 99: "bi-cloud-lightning-rain",
+      };
+
+      const WMO_DESC_TH = {
+        0: "แจ่มใส", 1: "เมฆน้อย", 2: "มีเมฆบางส่วน", 3: "มีเมฆมาก",
+        45: "หมอก", 48: "หมอกเกาะแข็ง",
+        51: "ฝนปรอยเบา", 53: "ฝนปรอย", 55: "ฝนปรอยหนัก",
+        61: "ฝนเบา", 63: "ฝน", 65: "ฝนหนัก",
+        71: "หิมะเบา", 73: "หิมะ", 75: "หิมะหนัก", 77: "เกล็ดน้ำแข็ง",
+        80: "ฝนหนักเล็กน้อย", 81: "ฝนหนัก", 82: "ฝนหนักมาก",
+        85: "หิมะ", 86: "หิมะหนัก",
+        95: "พายุฝนฟ้าคะนอง", 96: "พายุลูกเห็บ", 99: "พายุลูกเห็บหนัก",
+      };
+
+      const DAYS_TH = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
+      const WEATHER_LOC_KEY = "weather_location";
+      let weatherSearchTimer = null;
+
+      function renderWeatherCards(data) {
+        const daily = data.daily;
+        const container = document.getElementById("weatherForecast");
+        if (!daily || !daily.time || daily.time.length === 0) {
+          container.innerHTML = '<p class="weather-empty">ไม่มีข้อมูลพยากรณ์อากาศ</p>';
+          return;
+        }
+        container.innerHTML = "";
+        daily.time.forEach((dateStr, i) => {
+          const d = new Date(dateStr);
+          const dayLabel = i === 0 ? "วันนี้" : DAYS_TH[d.getDay()];
+          const wmoCode = daily.weathercode[i];
+          const icon = WMO_ICONS[wmoCode] || "bi-cloud";
+          const desc = WMO_DESC_TH[wmoCode] || "ไม่ทราบ";
+          const tmax = daily.temperature_2m_max[i] != null ? Number(daily.temperature_2m_max[i]).toFixed(1) : "-";
+          const tmin = daily.temperature_2m_min[i] != null ? Number(daily.temperature_2m_min[i]).toFixed(1) : "-";
+          const rain = daily.precipitation_sum[i] != null ? Number(daily.precipitation_sum[i]).toFixed(1) : "-";
+          const rainProb = daily.precipitation_probability_max[i] ?? "-";
+          const wind = daily.windspeed_10m_max[i] != null ? Number(daily.windspeed_10m_max[i]).toFixed(1) : "-";
+          const card = document.createElement("div");
+          card.className = "weather-day-card";
+          card.innerHTML = `
+            <div class="weather-day-label">${dayLabel}</div>
+            <div class="weather-day-date">${d.toLocaleDateString("th-TH", { day: "numeric", month: "short" })}</div>
+            <i class="bi ${icon} weather-day-icon" aria-hidden="true"></i>
+            <div class="weather-day-desc">${desc}</div>
+            <div class="weather-day-temp">
+              <span class="temp-max">${tmax}°</span>
+              <span class="temp-sep">/</span>
+              <span class="temp-min">${tmin}°</span>
+            </div>
+            <div class="weather-day-rain"><i class="bi bi-droplet-fill" aria-hidden="true"></i> ${rainProb}% · ${rain} มม.</div>
+            <div class="weather-day-wind"><i class="bi bi-wind" aria-hidden="true"></i> ${wind} km/h</div>
+          `;
+          container.appendChild(card);
+        });
+      }
+
+      async function loadWeather(lat, lon) {
+        const container = document.getElementById("weatherForecast");
+        container.innerHTML = '<p class="weather-empty">กำลังโหลดพยากรณ์อากาศ...</p>';
+        try {
+          const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
+          if (!res.ok) throw new Error(res.status);
+          const data = await res.json();
+          renderWeatherCards(data);
+        } catch {
+          container.innerHTML = '<p class="weather-empty weather-error"><i class="bi bi-exclamation-triangle-fill"></i> โหลดพยากรณ์อากาศไม่สำเร็จ</p>';
+        }
+      }
+
+      function selectWeatherLocation(loc) {
+        localStorage.setItem(WEATHER_LOC_KEY, JSON.stringify(loc));
+        const badge = document.getElementById("weatherLocationName");
+        badge.textContent = `${loc.name}${loc.admin1 ? ", " + loc.admin1 : ""}`;
+        badge.classList.remove("hidden");
+        const input = document.getElementById("weatherSearchInput");
+        input.value = "";
+        input.blur();
+        const ul = document.getElementById("weatherSearchResults");
+        ul.classList.add("hidden");
+        ul.innerHTML = "";
+        loadWeather(loc.lat, loc.lon);
+      }
+
+      async function searchWeatherLocation(q) {
+        const ul = document.getElementById("weatherSearchResults");
+        if (q.trim().length < 2) { ul.classList.add("hidden"); return; }
+        try {
+          const res = await fetch(`/api/geocode?q=${encodeURIComponent(q.trim())}`);
+          if (!res.ok) throw new Error(res.status);
+          const json = await res.json();
+          ul.innerHTML = "";
+          if (!json.results || json.results.length === 0) {
+            ul.innerHTML = '<li class="weather-no-result">ไม่พบสถานที่</li>';
+          } else {
+            json.results.forEach((loc) => {
+              const li = document.createElement("li");
+              li.textContent = `${loc.name}${loc.admin1 ? ", " + loc.admin1 : ""}`;
+              li.addEventListener("click", () => selectWeatherLocation(loc));
+              ul.appendChild(li);
+            });
+          }
+          ul.classList.remove("hidden");
+        } catch {
+          ul.classList.add("hidden");
+        }
+      }
+
+      document.getElementById("weatherSearchInput").addEventListener("input", (e) => {
+        clearTimeout(weatherSearchTimer);
+        weatherSearchTimer = setTimeout(() => searchWeatherLocation(e.target.value), 400);
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest(".weather-search-wrap")) {
+          document.getElementById("weatherSearchResults").classList.add("hidden");
+        }
+      });
+
+      // Restore saved location on load
+      try {
+        const saved = localStorage.getItem(WEATHER_LOC_KEY);
+        if (saved) selectWeatherLocation(JSON.parse(saved));
+      } catch { /* ignore */ }
     </script>
   </body>
 </html>

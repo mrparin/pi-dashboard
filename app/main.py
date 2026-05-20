@@ -5,7 +5,8 @@ import json
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Query, Request, WebSocket, WebSocketDisconnect
+import httpx
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -105,6 +106,65 @@ async def api_scatter(
         xfield, yfield = "soil_temp", "soil_humi"
     points = service.get_scatter(xfield, yfield, hours=hours)
     return JSONResponse(content={"pair": pair, "hours": hours, "points": points})
+
+
+@app.get("/api/geocode")
+async def api_geocode(q: str = Query(..., min_length=1, max_length=100)) -> JSONResponse:
+    """Proxy Open-Meteo geocoding API – returns matching places for a given name."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                "https://geocoding-api.open-meteo.com/v1/search",
+                params={"name": q, "count": 8, "language": "th"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"Geocoding service unavailable: {exc}")
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=502, detail=f"Geocoding service error: {exc.response.status_code}")
+
+    results = [
+        {
+            "name": r.get("name", ""),
+            "admin1": r.get("admin1", ""),
+            "lat": r.get("latitude"),
+            "lon": r.get("longitude"),
+        }
+        for r in data.get("results", [])
+    ]
+    return JSONResponse(content={"results": results})
+
+
+@app.get("/api/weather")
+async def api_weather(
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
+) -> JSONResponse:
+    """Proxy Open-Meteo 7-day daily forecast."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                "https://api.open-meteo.com/v1/forecast",
+                params={
+                    "latitude": lat,
+                    "longitude": lon,
+                    "daily": (
+                        "weathercode,temperature_2m_max,temperature_2m_min,"
+                        "precipitation_sum,precipitation_probability_max,windspeed_10m_max"
+                    ),
+                    "timezone": "Asia/Bangkok",
+                    "forecast_days": 7,
+                },
+            )
+            resp.raise_for_status()
+            data = resp.json()
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"Weather service unavailable: {exc}")
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=502, detail=f"Weather service error: {exc.response.status_code}")
+
+    return JSONResponse(content=data)
 
 
 @app.websocket("/ws")
