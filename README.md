@@ -65,6 +65,13 @@ sudo systemctl status durian-dashboard --no-pager
 sudo ss -tulpn | grep 8080
 ```
 
+ปิดหน้า browser/kiosk ปัจจุบัน (กรณีต้องการหยุดชั่วคราว):
+
+```bash
+pkill -f start-dashboard-kiosk.sh
+pkill -f "chromium|chromium-browser"
+```
+
 หมายเหตุ:
 - ถ้าหน้างานไม่ได้ใช้ broker ในเครื่องเดียวกัน ให้ตั้ง `MQTT_HOST` เป็น broker ปลายทาง
 - สำหรับ Pi 3 แนะนำ `RETAIN_DAYS=7-14` เพื่อลดการเขียน SD card
