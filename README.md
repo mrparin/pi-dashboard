@@ -22,11 +22,13 @@ Lightweight MQTT dashboard for Raspberry Pi 3 without Node-RED, InfluxDB, or Thi
   - `ph_status`, `ph_message`, `ph_action`
 - Realtime cards and history charts (24h / 7d)
 
-## ติดตั้งบน Raspberry Pi แบบละเอียด (Step by step)
+## คู่มือการติดตั้งและอัปเดต
 
-คู่มือนี้เหมาะกับ Raspberry Pi OS (Bookworm/Bullseye) และทดสอบกับ Pi 3 ได้
+### 1) การติดตั้งลงใน Raspberry Pi
 
-## 1) เตรียมเครื่องครั้งแรก (ทำครั้งเดียว)
+เหมาะกับ Raspberry Pi OS (Bookworm/Bullseye) และทดสอบกับ Pi 3
+
+เตรียมเครื่องครั้งแรก:
 
 ```bash
 sudo apt update
@@ -34,11 +36,7 @@ sudo apt upgrade -y
 sudo apt install -y git
 ```
 
-ถ้าใช้ MQTT broker ภายนอก (เช่น `sci-iot.ddns.net`) ไม่จำเป็นต้องเปิด mosquitto ในเครื่องก็ได้
-
-## 2) ดึงโปรเจกต์ลงเครื่อง Pi
-
-กรณี clone ครั้งแรก:
+ดึงโปรเจกต์ครั้งแรก:
 
 ```bash
 cd /opt
@@ -46,9 +44,34 @@ sudo git clone <YOUR_REPO_URL> durian-dashboard
 sudo chown -R pi:pi /opt/durian-dashboard
 ```
 
-กรณีมีโฟลเดอร์เดิมอยู่แล้ว ให้ข้ามไปขั้นตอนอัปเดตเวอร์ชัน
+ตั้งค่าไฟล์ `.env` (ครั้งแรก):
 
-## 3) อัปเดตเวอร์ชันใหม่จาก GitHub (แทนของเดิม)
+```bash
+cd /opt/durian-dashboard
+cp .env.example .env
+```
+
+ติดตั้งแบบ kiosk (เปิด browser อัตโนมัติ):
+
+```bash
+cd /opt/durian-dashboard
+sudo bash scripts/setup_pi_kiosk.sh --yes
+```
+
+ตรวจผลหลังติดตั้ง:
+
+```bash
+sudo systemctl status durian-dashboard --no-pager
+sudo ss -tulpn | grep 8080
+```
+
+หมายเหตุ:
+- ถ้าหน้างานไม่ได้ใช้ broker ในเครื่องเดียวกัน ให้ตั้ง `MQTT_HOST` เป็น broker ปลายทาง
+- สำหรับ Pi 3 แนะนำ `RETAIN_DAYS=7-14` เพื่อลดการเขียน SD card
+
+### 2) การ update software จาก git ใหม่
+
+ใช้เมื่อมีการเปลี่ยนแปลงซอฟต์แวร์ใหม่ใน repository
 
 ```bash
 cd /opt/durian-dashboard
@@ -56,13 +79,13 @@ git status
 git pull origin main
 ```
 
-ถ้า repository ใช้ branch `master` ให้เปลี่ยนคำสั่งเป็น:
+ถ้าโครงการใช้ branch `master`:
 
 ```bash
 git pull origin master
 ```
 
-ถ้า `git pull` ติดเพราะมีไฟล์แก้ค้าง:
+ถ้า pull ไม่ได้เพราะมีไฟล์แก้ค้าง:
 
 ```bash
 git stash
@@ -70,189 +93,75 @@ git pull origin main
 git stash pop
 ```
 
-## 4) ตั้งค่า `.env` ให้ตรงหน้างาน
+อัปเดต dependency/service หลัง pull:
 
-สร้างไฟล์จากตัวอย่าง (ครั้งแรก):
+```bash
+sudo bash scripts/setup_pi_kiosk.sh --yes
+sudo systemctl restart durian-dashboard
+```
+
+### 3) ติดตั้งไปยังเครื่อง server ใหม่ (user ไม่เหมือน Raspberry Pi)
+
+กรณีเครื่องใหม่มี user ไม่ใช่ `pi` (ตัวอย่างใช้ `bigdata`):
 
 ```bash
 cd /opt/durian-dashboard
-cp .env.example .env
+sudo PI_USER=bigdata APP_DIR=/opt/durian-dashboard bash scripts/setup_pi_service_only.sh --yes
 ```
 
-ตัวอย่างค่าที่ควรตรวจ:
+ตรวจว่า service ถูก deploy ด้วย user/group ที่ถูกต้อง:
 
 ```bash
-MQTT_HOST=sci-iot.ddns.net
-MQTT_PORT=1883
-MQTT_TOPIC=durian_farm1/node_sensor
-MQTT_QOS=1
-
-DB_PATH=./data/durian_dashboard.db
-RETAIN_DAYS=14
-
-APP_HOST=0.0.0.0
-APP_PORT=8080
-REFRESH_SECONDS=3
+sudo systemctl cat durian-dashboard | grep -E '^(User|Group)='
 ```
 
-หมายเหตุ:
-- `RETAIN_DAYS` แนะนำ 7-14 วันสำหรับ Pi 3 เพื่อลดการเขียน SD card
-- ถ้าใช้ broker ในเครื่องเดียวกัน ให้ใช้ `MQTT_HOST=127.0.0.1`
+ตัวอย่างผลที่ควรได้:
 
-## 5) รันสคริปต์ติดตั้งอัตโนมัติ (แนะนำ)
+```bash
+User=bigdata
+Group=bigdata
+```
 
-สคริปต์อยู่ที่ `scripts/setup_pi_kiosk.sh` และจะทำครบทั้ง backend service + desktop autostart + browser autostart + screen timeout
+ถ้าพอร์ต 8080 ถูกใช้งานอยู่แล้ว ให้เปลี่ยนพอร์ตในไฟล์ service แล้ว reload:
 
-ถ้าติดตั้งบน server อื่นและต้องการเฉพาะ backend service (ไม่เปิด browser อัตโนมัติ) ให้ใช้ `scripts/setup_pi_service_only.sh`
+```bash
+sudo sed -i 's/--port 8080/--port 8081/' /etc/systemd/system/durian-dashboard.service
+sudo systemctl daemon-reload
+sudo systemctl restart durian-dashboard
+```
 
-### แบบ service-only (ไม่เปิด browser อัตโนมัติ)
+### 4) การติดตั้งเฉพาะ service อย่างเดียว (ไม่เปิด browser อัตโนมัติ)
 
-สคริปต์ `scripts/setup_pi_service_only.sh` รองรับการย้ายไปเครื่องใหม่ที่ไม่ได้ใช้ user ชื่อ `pi` แล้ว โดยจะตั้งค่าในไฟล์ systemd ปลายทางให้ตรงกับค่าที่ระบุระหว่างติดตั้ง (เช่น `User`, `Group`, `WorkingDirectory`, `DB_PATH`, `ExecStart`)
+ใช้สคริปต์ `scripts/setup_pi_service_only.sh`
 
-แบบถามคำถามก่อนติดตั้ง:
+แบบ interactive:
 
 ```bash
 cd /opt/durian-dashboard
 sudo bash scripts/setup_pi_service_only.sh
 ```
 
-แบบไม่ถามคำถาม:
+แบบ non-interactive:
 
 ```bash
 cd /opt/durian-dashboard
 sudo bash scripts/setup_pi_service_only.sh --yes
 ```
 
-### ติดตั้งบนเครื่องใหม่ที่ user ไม่ใช่ pi
+สิ่งที่สคริปต์นี้ทำ:
+- ติดตั้ง Python packages ที่จำเป็น
+- สร้าง/อัปเดต virtual environment
+- ติดตั้งและเริ่ม `durian-dashboard.service`
 
-ตัวอย่างเครื่องใหม่ที่ใช้ user ชื่อ `ubuntu`:
+สิ่งที่สคริปต์นี้ไม่ทำ:
+- ไม่ตั้งค่า desktop autologin
+- ไม่สร้าง browser autostart
 
-```bash
-cd /opt/durian-dashboard
-sudo PI_USER=ubuntu APP_DIR=/opt/durian-dashboard bash scripts/setup_pi_service_only.sh --yes
-```
-
-หมายเหตุ:
-- ถ้าไม่ส่ง `PI_USER` ค่าเริ่มต้นคือ `pi`
-- `PI_USER` ต้องมีอยู่จริงในระบบ (สคริปต์ตรวจด้วย `id <user>`)
-- ถ้าใช้โหมด interactive (`sudo bash scripts/setup_pi_service_only.sh`) สามารถพิมพ์ชื่อ user ของเครื่องใหม่ตอนที่ระบบถามได้เลย
-
-### ตรวจหลังติดตั้งบนเครื่องใหม่ (เช็ก User/Group ของ service)
-
-ตรวจค่าจริงในไฟล์ service ที่ถูก deploy:
-
-```bash
-sudo systemctl cat durian-dashboard | grep -E '^(User|Group)='
-```
-
-ตัวอย่างผลที่ควรได้ (กรณีติดตั้งด้วย `PI_USER=ubuntu`):
-
-```bash
-User=ubuntu
-Group=ubuntu
-```
-
-ถ้าค่าไม่ตรง ให้รันสคริปต์ติดตั้งใหม่พร้อมระบุ `PI_USER` ให้ถูกต้อง แล้วรีสตาร์ต service:
-
-```bash
-cd /opt/durian-dashboard
-sudo PI_USER=ubuntu APP_DIR=/opt/durian-dashboard bash scripts/setup_pi_service_only.sh --yes
-sudo systemctl restart durian-dashboard
-```
-
-สคริปต์นี้จะติดตั้งเฉพาะ:
-- Python runtime dependencies และ virtual environment
-- `durian-dashboard.service` ให้เริ่มอัตโนมัติหลังบูต
-- ไม่แตะค่า desktop/autologin และไม่สร้าง browser autostart
-
-### แบบถามคำถามก่อนติดตั้ง (interactive)
-
-```bash
-cd /opt/durian-dashboard
-sudo bash scripts/setup_pi_kiosk.sh
-```
-
-ระบบจะถามค่า เช่น:
-- Project directory
-- Linux user (เช่น `pi`)
-- Dashboard URL (ปกติใช้ `http://127.0.0.1:8080`)
-- Screen timeout (วินาที) โดยค่าแนะนำคือ `3600`
-
-### แบบไม่ถามคำถาม (non-interactive)
-
-```bash
-cd /opt/durian-dashboard
-sudo bash scripts/setup_pi_kiosk.sh --yes
-```
-
-## 6) รีบูตและตรวจผลหลังติดตั้ง
-
-```bash
-sudo reboot
-```
-
-หลังเครื่องกลับมา:
+ตรวจสถานะหลังติดตั้ง:
 
 ```bash
 sudo systemctl status durian-dashboard --no-pager
-sudo ss -tulpn | grep 8080
-```
-
-สิ่งที่ต้องได้:
-- service `durian-dashboard` เป็น `active (running)`
-- Chromium เปิดหน้า dashboard อัตโนมัติแบบหน้าต่างปกติ (ไม่เต็มจอ)
-- จอ idle 1 ชั่วโมงแล้วดับ และแตะจอแล้วติดกลับ
-
-## 7) ทดสอบเร็ว 20 วินาที (ก่อนใช้งานจริง)
-
-```bash
-export DISPLAY=:0
-export XAUTHORITY=/home/pi/.Xauthority
-xset s 20 0
-xset +dpms
-xset dpms 20 20 20
-```
-
-ทดสอบ:
-- ปล่อยไว้ประมาณ 20 วินาที จอต้องดับ
-- แตะหน้าจอ จอต้องติดกลับ
-
-คืนค่าจริง 1 ชั่วโมง:
-
-```bash
-xset s 3600 0
-xset +dpms
-xset dpms 3600 3600 3600
-```
-
-## 8) คำสั่งตรวจสอบและแก้ปัญหาเบื้องต้น
-
-ดู log แบบเรียลไทม์:
-
-```bash
-sudo journalctl -u durian-dashboard -f
-```
-
-รีสตาร์ต service หลังแก้ค่า:
-
-```bash
-sudo systemctl restart durian-dashboard
-```
-
-ถ้า Chromium ไม่เปิดอัตโนมัติ ให้ตรวจไฟล์เหล่านี้:
-- `scripts/setup_pi_kiosk.sh`
-- `/home/pi/start-dashboard-kiosk.sh`
-- `/home/pi/.config/autostart/dashboard-kiosk.desktop`
-
-## 9) อัปเดตโปรเจกต์รอบถัดไป
-
-ทุกครั้งที่มี release ใหม่จาก GitHub:
-
-```bash
-cd /opt/durian-dashboard
-git pull origin main
-sudo bash scripts/setup_pi_kiosk.sh --yes
-sudo systemctl restart durian-dashboard
+sudo journalctl -u durian-dashboard -n 100 --no-pager
 ```
 
 ## Environment variables (reference)
