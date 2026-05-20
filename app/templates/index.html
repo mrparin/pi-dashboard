@@ -140,6 +140,7 @@
 
       const axisLabelColor = "#355872";
       const axisTickColor = "#355872";
+      const chartGridColor = "rgba(53, 88, 114, 0.22)";
 
       // Improve tooltip reliability on dense/small points.
       Chart.defaults.interaction = { mode: "nearest", intersect: false, axis: "x" };
@@ -157,12 +158,12 @@
             x: {
               ticks: { color: axisTickColor },
               title: { color: axisLabelColor },
-              grid: { color: "rgba(255,255,255,0.08)" }
+              grid: { color: chartGridColor }
             },
             y: {
               ticks: { color: axisTickColor },
               title: { color: axisLabelColor },
-              grid: { color: "rgba(255,255,255,0.08)" }
+              grid: { color: chartGridColor }
             }
           }
         },
@@ -178,12 +179,12 @@
             x: {
               ticks: { color: axisTickColor },
               title: { color: axisLabelColor },
-              grid: { color: "rgba(255,255,255,0.08)" }
+              grid: { color: chartGridColor }
             },
             y: {
               ticks: { color: axisTickColor },
               title: { color: axisLabelColor },
-              grid: { color: "rgba(255,255,255,0.08)" }
+              grid: { color: chartGridColor }
             }
           }
         },
@@ -231,19 +232,19 @@
               position: "left",
               title: { display: true, text: "อุณหภูมิ (°C)", color: axisLabelColor },
               ticks: { color: axisTickColor },
-              grid: { color: "rgba(255,255,255,0.08)" }
+              grid: { color: chartGridColor }
             },
             yHumi: {
               type: "linear",
               position: "right",
               title: { display: true, text: "ความชื้น (%RH)", color: axisLabelColor },
               ticks: { color: axisTickColor },
-              grid: { drawOnChartArea: false, color: "rgba(255,255,255,0.08)" }
+              grid: { drawOnChartArea: false, color: chartGridColor }
             },
             x: {
               ticks: { color: axisTickColor },
               title: { color: axisLabelColor },
-              grid: { color: "rgba(255,255,255,0.08)" }
+              grid: { color: chartGridColor }
             }
           },
         },
@@ -268,19 +269,19 @@
               position: "left",
               title: { display: true, text: "อุณหภูมิ (°C)", color: axisLabelColor },
               ticks: { color: axisTickColor },
-              grid: { color: "rgba(255,255,255,0.08)" }
+              grid: { color: chartGridColor }
             },
             yHumi: {
               type: "linear",
               position: "right",
               title: { display: true, text: "ความชื้น (%)", color: axisLabelColor },
               ticks: { color: axisTickColor },
-              grid: { drawOnChartArea: false, color: "rgba(255,255,255,0.08)" }
+              grid: { drawOnChartArea: false, color: chartGridColor }
             },
             x: {
               ticks: { color: axisTickColor },
               title: { color: axisLabelColor },
-              grid: { color: "rgba(255,255,255,0.08)" }
+              grid: { color: chartGridColor }
             }
           },
         },
