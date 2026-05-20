@@ -150,7 +150,7 @@ require_paths() {
 install_packages() {
   log "Installing OS packages"
   apt-get update
-  apt-get install -y python3-venv python3-pip curl unclutter
+  apt-get install -y python3-venv python3-pip curl unclutter xdotool
 
   if apt-cache show chromium-browser >/dev/null 2>&1; then
     apt-get install -y chromium-browser
@@ -197,6 +197,14 @@ set -euo pipefail
 export DISPLAY=:0
 export XAUTHORITY=$PI_HOME/.Xauthority
 
+# Wait until desktop X session is ready.
+until xset q >/dev/null 2>&1; do
+  sleep 2
+done
+
+# Give Pi 3 a short settle period after login.
+sleep 4
+
 # Idle for one hour, then blank/power-save display.
 xset s $SCREEN_TIMEOUT 0
 xset +dpms
@@ -221,12 +229,28 @@ fi
 # Keep browser alive if it gets closed.
 while true; do
   "\$BROWSER" \
-    --new-window \
-    --incognito \
+    --kiosk \
+    --app="\$URL" \
+    --no-first-run \
+    --disable-gpu \
+    --disable-extensions \
+    --disable-background-networking \
+    --disk-cache-size=1048576 \
+    --media-cache-size=1048576 \
     --noerrdialogs \
     --disable-session-crashed-bubble \
     --check-for-update-interval=31536000 \
-    "\$URL"
+    >/tmp/durian-kiosk-browser.log 2>&1 &
+
+  BROWSER_PID=\$!
+
+  # On some Pi 3 boots Chromium opens a blank tab first; trigger one refresh automatically.
+  sleep 8
+  if command -v xdotool >/dev/null 2>&1; then
+    xdotool search --sync --onlyvisible --class chromium windowactivate --sync key ctrl+r >/dev/null 2>&1 || true
+  fi
+
+  wait "\$BROWSER_PID" || true
   sleep 2
 done
 EOF
