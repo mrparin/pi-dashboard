@@ -246,12 +246,10 @@ while true; do
   BROWSER_PID=\$!
 
   # Pi 3 can show a blank page on first launch in windowed mode.
-  # Retry refresh a few times to avoid manual Ctrl+R.
+  # Trigger a single automatic refresh to avoid manual Ctrl+R.
   if command -v xdotool >/dev/null 2>&1; then
-    for _ in 1 2 3; do
-      sleep 5
-      xdotool search --sync --onlyvisible --class chromium windowactivate --sync key ctrl+r >/dev/null 2>&1 || true
-    done
+    sleep 5
+    xdotool search --sync --onlyvisible --class chromium windowactivate --sync key ctrl+r >/dev/null 2>&1 || true
   fi
 
   wait "\$BROWSER_PID" || true
