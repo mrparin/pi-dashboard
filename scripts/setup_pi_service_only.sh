@@ -88,6 +88,10 @@ prompt_yes_no() {
   esac
 }
 
+escape_sed_replacement() {
+  printf '%s' "$1" | sed -e 's/[&|]/\\&/g'
+}
+
 collect_inputs() {
   if [ "$ASSUME_YES" -eq 1 ] || ! is_tty; then
     return
@@ -148,7 +152,24 @@ setup_python_env() {
 
 setup_systemd_service() {
   log "Configuring systemd service"
-  cp "$SERVICE_SRC" "$SERVICE_DST"
+  local app_dir_escaped
+  local user_escaped
+  local exec_start_escaped
+  local db_path_escaped
+
+  app_dir_escaped="$(escape_sed_replacement "$APP_DIR")"
+  user_escaped="$(escape_sed_replacement "$PI_USER")"
+  exec_start_escaped="$(escape_sed_replacement "$APP_DIR/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 1")"
+  db_path_escaped="$(escape_sed_replacement "$APP_DIR/data/durian_dashboard.db")"
+
+  sed \
+    -e "s|^User=.*|User=$user_escaped|" \
+    -e "s|^Group=.*|Group=$user_escaped|" \
+    -e "s|^WorkingDirectory=.*|WorkingDirectory=$app_dir_escaped|" \
+    -e "s|^Environment=DB_PATH=.*|Environment=DB_PATH=$db_path_escaped|" \
+    -e "s|^ExecStart=.*|ExecStart=$exec_start_escaped|" \
+    "$SERVICE_SRC" > "$SERVICE_DST"
+
   systemctl daemon-reload
   systemctl enable "$SERVICE_NAME"
   systemctl restart "$SERVICE_NAME"
