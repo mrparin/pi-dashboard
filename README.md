@@ -107,6 +107,8 @@ REFRESH_SECONDS=3
 
 ### แบบ service-only (ไม่เปิด browser อัตโนมัติ)
 
+สคริปต์ `scripts/setup_pi_service_only.sh` รองรับการย้ายไปเครื่องใหม่ที่ไม่ได้ใช้ user ชื่อ `pi` แล้ว โดยจะตั้งค่าในไฟล์ systemd ปลายทางให้ตรงกับค่าที่ระบุระหว่างติดตั้ง (เช่น `User`, `Group`, `WorkingDirectory`, `DB_PATH`, `ExecStart`)
+
 แบบถามคำถามก่อนติดตั้ง:
 
 ```bash
@@ -119,6 +121,43 @@ sudo bash scripts/setup_pi_service_only.sh
 ```bash
 cd /opt/durian-dashboard
 sudo bash scripts/setup_pi_service_only.sh --yes
+```
+
+### ติดตั้งบนเครื่องใหม่ที่ user ไม่ใช่ pi
+
+ตัวอย่างเครื่องใหม่ที่ใช้ user ชื่อ `ubuntu`:
+
+```bash
+cd /opt/durian-dashboard
+sudo PI_USER=ubuntu APP_DIR=/opt/durian-dashboard bash scripts/setup_pi_service_only.sh --yes
+```
+
+หมายเหตุ:
+- ถ้าไม่ส่ง `PI_USER` ค่าเริ่มต้นคือ `pi`
+- `PI_USER` ต้องมีอยู่จริงในระบบ (สคริปต์ตรวจด้วย `id <user>`)
+- ถ้าใช้โหมด interactive (`sudo bash scripts/setup_pi_service_only.sh`) สามารถพิมพ์ชื่อ user ของเครื่องใหม่ตอนที่ระบบถามได้เลย
+
+### ตรวจหลังติดตั้งบนเครื่องใหม่ (เช็ก User/Group ของ service)
+
+ตรวจค่าจริงในไฟล์ service ที่ถูก deploy:
+
+```bash
+sudo systemctl cat durian-dashboard | grep -E '^(User|Group)='
+```
+
+ตัวอย่างผลที่ควรได้ (กรณีติดตั้งด้วย `PI_USER=ubuntu`):
+
+```bash
+User=ubuntu
+Group=ubuntu
+```
+
+ถ้าค่าไม่ตรง ให้รันสคริปต์ติดตั้งใหม่พร้อมระบุ `PI_USER` ให้ถูกต้อง แล้วรีสตาร์ต service:
+
+```bash
+cd /opt/durian-dashboard
+sudo PI_USER=ubuntu APP_DIR=/opt/durian-dashboard bash scripts/setup_pi_service_only.sh --yes
+sudo systemctl restart durian-dashboard
 ```
 
 สคริปต์นี้จะติดตั้งเฉพาะ:
