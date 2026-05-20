@@ -74,7 +74,7 @@ pkill -f "chromium|chromium-browser"
 
 หมายเหตุ:
 - ถ้าหน้างานไม่ได้ใช้ broker ในเครื่องเดียวกัน ให้ตั้ง `MQTT_HOST` เป็น broker ปลายทาง
-- สำหรับ Pi 3 แนะนำ `RETAIN_DAYS=7-14` เพื่อลดการเขียน SD card
+- ถ้าเก็บข้อมูลจริงไว้ที่ server อยู่แล้ว แนะนำตั้ง `RETAIN_DAYS=90` (เก็บ local cache 3 เดือน)
 
 ### 2) การ update software จาก git ใหม่
 
@@ -187,6 +187,12 @@ APP_PORT
 REFRESH_SECONDS
 ```
 
+### Data retention policy (local cache)
+
+- ค่าแนะนำสำหรับหน้างานที่มีข้อมูลหลักอยู่บน server: `RETAIN_DAYS=90`
+- ระบบจะลบข้อมูลที่เก่ากว่า `RETAIN_DAYS` อัตโนมัติระหว่างรัน (ตรวจทุก ~1 ชั่วโมง)
+- สามารถปรับในไฟล์ `.env` ได้ตามต้องการ
+
 ## API
 
 - `GET /api/latest`
@@ -256,6 +262,6 @@ xset dpms 3600 3600 3600
 
 ## Notes for Pi3
 
-- Keep retention low (7-14 days) to protect SD card.
+- If upstream server stores long-term data, keep local cache at `RETAIN_DAYS=90`.
 - Use one Uvicorn worker.
 - Keep MQTT publish interval at 1-5 minutes.

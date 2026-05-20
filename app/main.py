@@ -26,13 +26,33 @@ service = DataService(db)
 mqtt_client = MqttIngestClient(settings, service)
 
 
+async def periodic_cleanup(stop_event: asyncio.Event) -> None:
+    # Run periodic retention cleanup so DB size stays bounded even without restarts.
+    while not stop_event.is_set():
+        try:
+            deleted = db.cleanup_old_data(settings.retain_days)
+            if deleted:
+                logger.info("Periodic cleanup removed %s rows", deleted)
+        except Exception as exc:  # pragma: no cover
+            logger.exception("Periodic cleanup failed: %s", exc)
+
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=3600)
+        except asyncio.TimeoutError:
+            continue
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    stop_event = asyncio.Event()
+    cleanup_task = asyncio.create_task(periodic_cleanup(stop_event))
     mqtt_client.start()
     logger.info("Application startup complete")
     try:
         yield
     finally:
+        stop_event.set()
+        await cleanup_task
         mqtt_client.stop()
         deleted = db.cleanup_old_data(settings.retain_days)
         logger.info("Cleanup removed %s rows", deleted)
