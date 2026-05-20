@@ -22,6 +22,43 @@ Lightweight MQTT dashboard for Raspberry Pi 3 without Node-RED, InfluxDB, or Thi
   - `ph_status`, `ph_message`, `ph_action`
 - Realtime cards and history charts (24h / 7d)
 
+## การรันบนเครื่อง PC (Windows) เพื่อทดสอบ
+
+ใช้ขั้นตอนนี้เมื่อต้องการทดสอบแอปบนเครื่องคอมพิวเตอร์ทั่วไป (ไม่ใช่ Raspberry Pi)
+
+1) เปิด PowerShell และเข้าโฟลเดอร์โปรเจกต์
+
+```powershell
+cd C:\Users\parinya_j\Documents\GitHub\pi-dashboard
+```
+
+2) สร้าง virtual environment (ครั้งแรกเท่านั้น)
+
+```powershell
+py -3 -m venv .venv
+```
+
+3) ติดตั้ง dependencies
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+4) รันแอป
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8080
+```
+
+5) เปิดหน้าเว็บทดสอบ
+
+- Dashboard: http://127.0.0.1:8080
+- Latest API: http://127.0.0.1:8080/api/latest
+
+6) หยุดแอป
+
+กด `Ctrl + C` ในหน้าต่าง PowerShell ที่กำลังรัน Uvicorn
+
 ## คู่มือการติดตั้งและอัปเดต
 
 ### 1) การติดตั้งลงใน Raspberry Pi
