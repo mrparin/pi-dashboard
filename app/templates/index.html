@@ -140,6 +140,12 @@
       const axisLabelColor = "#fff";
       const axisTickColor = "#fff";
 
+      // Improve tooltip reliability on dense/small points.
+      Chart.defaults.interaction = { mode: "nearest", intersect: false, axis: "x" };
+      Chart.defaults.elements.point.radius = 2;
+      Chart.defaults.elements.point.hoverRadius = 6;
+      Chart.defaults.elements.point.hitRadius = 12;
+
       const vpdChart = new Chart(document.getElementById("vpdChart"), {
         type: "line",
         data: { labels: [], datasets: [{ label: "VPD kPa", data: [], tension: 0.25 }] },
