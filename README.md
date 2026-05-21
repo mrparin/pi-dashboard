@@ -390,6 +390,31 @@ xset +dpms
 xset dpms 3600 3600 3600
 ```
 
+### Troubleshooting: SQLite error `database disk image is malformed`
+
+หากดู log แล้วพบข้อความนี้ แปลว่าไฟล์ฐานข้อมูล SQLite เสียหาย (ไม่เกี่ยวกับ Wi-Fi โดยตรง)
+
+ตรวจ log:
+
+```bash
+sudo journalctl -u durian-dashboard -n 200 --no-pager
+```
+
+ระบบเวอร์ชันใหม่จะพยายาม backup และสร้างฐานข้อมูลใหม่ให้อัตโนมัติเมื่อเจอ error นี้
+
+หากยังไม่หาย ให้กู้คืนแบบ manual:
+
+```bash
+cd /opt/durian-dashboard
+sudo systemctl stop durian-dashboard
+mv data/durian_dashboard.db data/durian_dashboard.db.corrupt.$(date +%Y%m%d_%H%M%S)
+sudo systemctl start durian-dashboard
+```
+
+หมายเหตุ:
+- หลังสร้าง DB ใหม่ กราฟย้อนหลังจะเริ่มเก็บข้อมูลใหม่ตั้งแต่เวลาที่ service กลับมารัน
+- ข้อมูลไฟล์เก่าจะยังอยู่ในชื่อ `.corrupt.*` สำหรับเก็บไว้ตรวจสอบภายหลัง
+
 ## Notes for Pi3
 
 - If upstream server stores long-term data, keep local cache at `RETAIN_DAYS=90`.
