@@ -207,8 +207,9 @@ sleep 4
 
 # Idle for one hour, then blank/power-save display.
 xset s $SCREEN_TIMEOUT 0
+xset s lock
 xset +dpms
-xset dpms $SCREEN_TIMEOUT $SCREEN_TIMEOUT $SCREEN_TIMEOUT
+xset dpms $SCREEN_TIMEOUT $SCREEN_TIMEOUT 0
 
 # Hide cursor when idle.
 unclutter -idle 0.5 -root &
