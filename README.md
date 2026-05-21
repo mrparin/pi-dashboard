@@ -306,6 +306,46 @@ REFRESH_SECONDS
   sudo ss -tulpn | grep 8080
   ```
 
+### Screen timeout (xset/DPMS) usage
+
+ใช้กับ Raspberry Pi ที่รัน X11/Chromium kiosk เพื่อกำหนดเวลาพักหน้าจอหรือดับหน้าจอ
+
+คำสั่งที่ต้องใช้และความหมาย:
+
+- `export DISPLAY=:0`
+  - ระบุ X display หลักของเครื่อง (จอที่ kiosk ใช้งานอยู่)
+- `export XAUTHORITY=/home/pi/.Xauthority`
+  - ระบุไฟล์สิทธิ์เข้าถึง X session ของ user `pi` (ช่วยแก้ปัญหา `unable to open display`)
+- `xset s <sec> 0`
+  - ตั้ง idle timeout ของ screen saver เป็น `<sec>` วินาที
+- `xset +dpms`
+  - เปิดการทำงาน DPMS (โหมดประหยัดพลังงานของจอ)
+- `xset dpms <standby> <suspend> <off>`
+  - ตั้งเวลา DPMS เป็นวินาที
+  - หากตั้งค่าเท่ากันทั้ง 3 ค่า เช่น `900 900 900` จะทำให้จอเข้าสถานะพัก/ดับที่เวลาใกล้เคียงกัน
+
+สูตรคำนวณเวลาสำหรับตั้งค่าดับหน้าจอ:
+
+- `T_sec = (ชั่วโมง x 3600) + (นาที x 60) + วินาที`
+
+ตัวอย่างการคำนวณ:
+
+- 5 นาที: `5 x 60 = 300` วินาที
+- 15 นาที: `15 x 60 = 900` วินาที
+- 1 ชั่วโมง: `1 x 3600 = 3600` วินาที
+
+ตารางแปลงเวลาแบบเร็ว:
+
+| นาที | วินาที (ใช้กับ xset) |
+|---:|---:|
+| 1  | 60   |
+| 3  | 180  |
+| 5  | 300  |
+| 10 | 600  |
+| 15 | 900  |
+| 30 | 1800 |
+| 60 | 3600 |
+
 ### Optional: Quick screen timeout test (20 seconds)
 
 ```bash
@@ -316,9 +356,21 @@ xset +dpms
 xset dpms 20 20 20
 ```
 
+### Example: set screen timeout to 15 minutes
+
+```bash
+export DISPLAY=:0
+export XAUTHORITY=/home/pi/.Xauthority
+xset s 900 0
+xset +dpms
+xset dpms 900 900 900
+```
+
 ### Restore 1-hour screen timeout
 
 ```bash
+export DISPLAY=:0
+export XAUTHORITY=/home/pi/.Xauthority
 xset s 3600 0
 xset +dpms
 xset dpms 3600 3600 3600
