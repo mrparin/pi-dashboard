@@ -147,20 +147,34 @@ pkill -f "chromium|chromium-browser"
 ```bash
 cd /opt/durian-dashboard
 git status
-git pull origin main
+git branch --show-current
+```
+
+กรณีต้องการอัปเดต branch `02_addweather` (แนะนำ):
+
+```bash
+git fetch origin
+git switch 02_addweather
+git pull --ff-only origin 02_addweather
+```
+
+ถ้าโครงการใช้ branch `main`:
+
+```bash
+git pull --ff-only origin main
 ```
 
 ถ้าโครงการใช้ branch `master`:
 
 ```bash
-git pull origin master
+git pull --ff-only origin master
 ```
 
 ถ้า pull ไม่ได้เพราะมีไฟล์แก้ค้าง:
 
 ```bash
 git stash
-git pull origin main
+git pull --ff-only origin 02_addweather
 git stash pop
 ```
 
