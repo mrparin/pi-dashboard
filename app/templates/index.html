@@ -214,21 +214,123 @@
         await loadHistory("ph", 168, phChart);
       }
 
-      function openWs() {
+      let ws = null;
+      let wsReconnectTimer = null;
+      let wsBackoffMs = 1000;
+      let lastWsMessageAt = 0;
+
+      function setTopBadgeStatus(text) {
+        const el = document.getElementById("updatedAt");
+        if (el) el.textContent = text;
+      }
+
+      async function fetchLatestSnapshot() {
+        try {
+          const res = await fetch("/api/latest", { cache: "no-store" });
+          if (!res.ok) return;
+          const json = await res.json();
+          updateLatest(json.data);
+        } catch {
+          // Ignore temporary network failures; websocket watchdog will retry.
+        }
+      }
+
+      function clearReconnectTimer() {
+        if (!wsReconnectTimer) return;
+        clearTimeout(wsReconnectTimer);
+        wsReconnectTimer = null;
+      }
+
+      function scheduleReconnect() {
+        clearReconnectTimer();
+        if (!navigator.onLine) {
+          setTopBadgeStatus("Offline - waiting for network...");
+          return;
+        }
+        setTopBadgeStatus("Reconnecting...");
+        wsReconnectTimer = setTimeout(connectWs, wsBackoffMs);
+        wsBackoffMs = Math.min(wsBackoffMs * 2, 10000);
+      }
+
+      function closeWs() {
+        if (!ws) return;
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onerror = null;
+        ws.onclose = null;
+        try {
+          ws.close();
+        } catch {
+          // no-op
+        }
+        ws = null;
+      }
+
+      function connectWs() {
+        clearReconnectTimer();
+        if (!navigator.onLine) {
+          setTopBadgeStatus("Offline - waiting for network...");
+          return;
+        }
+        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+          return;
+        }
+
         const wsProtocol = location.protocol === "https:" ? "wss" : "ws";
-        const ws = new WebSocket(`${wsProtocol}://${location.host}/ws`);
+        closeWs();
+        ws = new WebSocket(`${wsProtocol}://${location.host}/ws`);
+
+        ws.onopen = () => {
+          wsBackoffMs = 1000;
+          lastWsMessageAt = Date.now();
+          fetchLatestSnapshot();
+        };
 
         ws.onmessage = (event) => {
+          lastWsMessageAt = Date.now();
           const payload = JSON.parse(event.data);
           updateLatest(payload.data);
         };
 
+        ws.onerror = () => {
+          closeWs();
+          scheduleReconnect();
+        };
+
         ws.onclose = () => {
-          setTimeout(openWs, 2000);
+          ws = null;
+          scheduleReconnect();
         };
       }
 
-      openWs();
+      window.addEventListener("offline", () => {
+        setTopBadgeStatus("Offline - waiting for network...");
+        closeWs();
+      });
+
+      window.addEventListener("online", () => {
+        setTopBadgeStatus("Network restored - reconnecting...");
+        fetchLatestSnapshot();
+        connectWs();
+        refreshCharts();
+        refreshTrendCharts();
+      });
+
+      // Watchdog: recover from half-open websocket states after network drops.
+      setInterval(() => {
+        if (!navigator.onLine) return;
+        if (!ws || ws.readyState === WebSocket.CLOSED) {
+          connectWs();
+          return;
+        }
+        const staleMs = Math.max(15000, refreshSeconds * 4000);
+        if (ws.readyState === WebSocket.OPEN && Date.now() - lastWsMessageAt > staleMs) {
+          closeWs();
+          connectWs();
+        }
+      }, 10000);
+
+      connectWs();
       refreshCharts();
       setInterval(refreshCharts, Math.max(30, refreshSeconds * 10) * 1000);
 
