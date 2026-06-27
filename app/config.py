@@ -12,7 +12,7 @@ class Settings:
     mqtt_qos: int = int(os.getenv("MQTT_QOS", "1"))
 
     db_path: str = os.getenv("DB_PATH", "./data/durian_dashboard.db")
-    retain_days: int = int(os.getenv("RETAIN_DAYS", "14"))
+    retain_days: int = int(os.getenv("RETAIN_DAYS", "90"))
 
     app_host: str = os.getenv("APP_HOST", "0.0.0.0")
     app_port: int = int(os.getenv("APP_PORT", "8080"))
