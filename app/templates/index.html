@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,16 +10,32 @@
   </head>
   <body>
     <header class="topbar">
-      <div>
-        <h1><i class="bi bi-tree-fill" aria-hidden="true"></i> สวนพรรณมณี</h1>
-        <p class="sub">Realtime MQTT topic: {{ topic }}</p>
+      <div class="brand-lockup">
+        <span class="brand-mark" aria-hidden="true">พ</span>
+        <div>
+          <p class="brand-kicker">DURIAN FIELD STATION · 01</p>
+          <h1>สวนพรรณมณี</h1>
+          <p class="sub">ระบบเฝ้าระวังสภาพแปลงทุเรียนแบบเรียลไทม์</p>
+        </div>
       </div>
-      <span id="updatedAt" class="badge">Waiting for data...</span>
+      <div class="connection-block">
+        <span class="connection-label">สถานะข้อมูลล่าสุด</span>
+        <span id="updatedAt" class="badge" role="status" aria-live="polite">กำลังรอข้อมูล...</span>
+        <span class="topic-label">MQTT · {{ topic }}</span>
+      </div>
     </header>
 
     <main class="layout">
+      <section class="field-brief" aria-labelledby="fieldBriefTitle">
+        <div>
+          <p class="section-label">LIVE ORCHARD CONDITION</p>
+          <h2 id="fieldBriefTitle">อ่านสภาพแปลง<br /><em>ก่อนตัดสินใจ</em></h2>
+        </div>
+        <p>ค่าจากเซนเซอร์และคำแนะนำด้าน VPD กับ pH ถูกจัดลำดับเพื่อช่วยประเมินความเสี่ยงก่อนให้น้ำ พ่นหมอก หรือปรับสภาพดิน</p>
+      </section>
+
       <section class="panel grouped-panel air-group">
-        <h2 class="group-title"><i class="bi bi-cloud-sun-fill" aria-hidden="true"></i> สภาพแวดล้อมอากาศ (Air Environment)</h2>
+        <div class="section-heading"><span class="section-index">01</span><div><p class="section-label">CANOPY / AIR</p><h2 class="group-title">สภาพเหนือทรงพุ่ม</h2></div></div>
         <div class="kpi-grid">
           <article class="kpi"><h3><i class="bi bi-thermometer-half" aria-hidden="true"></i> Air Temp</h3><p id="air_temp">-</p><small>C</small></article>
           <article class="kpi"><h3><i class="bi bi-droplet-half" aria-hidden="true"></i> Air Humidity</h3><p id="air_humi">-</p><small>%RH</small></article>
@@ -31,7 +47,7 @@
       </section>
 
       <section class="panel grouped-panel soil-group">
-        <h2 class="group-title"><i class="bi bi-moisture" aria-hidden="true"></i> สภาพแวดล้อมดิน (Soil Environment)</h2>
+        <div class="section-heading"><span class="section-index">02</span><div><p class="section-label">ROOT ZONE / SOIL</p><h2 class="group-title">สภาพบริเวณราก</h2></div></div>
         <div class="kpi-grid">
           <article class="kpi"><h3><i class="bi bi-thermometer-half" aria-hidden="true"></i> Soil Temp</h3><p id="soil_temp">-</p><small>C</small></article>
           <article class="kpi"><h3><i class="bi bi-water" aria-hidden="true"></i> Soil Moisture</h3><p id="soil_humi">-</p><small>%</small></article>
@@ -42,37 +58,39 @@
 
       <section class="panel status-grid">
         <article class="status-card" id="vpdCard">
-          <h3><i class="bi bi-heart-pulse" aria-hidden="true"></i> VPD Status</h3>
+          <p class="status-kicker">CANOPY DECISION</p>
+          <h3>คำแนะนำจาก VPD</h3>
           <p class="level" id="vpd_status">-</p>
           <p id="vpd_message">-</p>
           <p class="action" id="vpd_action">-</p>
         </article>
         <article class="status-card" id="phCard">
-          <h3><i class="bi bi-bezier2" aria-hidden="true"></i> pH Status</h3>
+          <p class="status-kicker">SOIL DECISION</p>
+          <h3>คำแนะนำจาก pH</h3>
           <p class="level" id="ph_status">-</p>
           <p id="ph_message">-</p>
           <p class="action" id="ph_action">-</p>
         </article>
       </section>
 
-      <section class="panel chart-grid">
+      <section class="panel chart-grid chart-grid-primary">
         <div class="chart-card">
-          <h3><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> VPD Last 24h</h3>
+          <p class="chart-kicker">24 HOURS</p><h3>แรงดึงน้ำของอากาศ · VPD</h3>
           <canvas id="vpdChart"></canvas>
         </div>
         <div class="chart-card">
-          <h3><i class="bi bi-graph-up" aria-hidden="true"></i> pH Last 7d</h3>
+          <p class="chart-kicker">7 DAYS</p><h3>ความเป็นกรด–ด่างของดิน · pH</h3>
           <canvas id="phChart"></canvas>
         </div>
       </section>
 
       <section class="panel chart-grid">
         <div class="chart-card">
-          <h3><i class="bi bi-cloud-drizzle" aria-hidden="true"></i> แนวโน้มอุณหภูมิและความชื้นอากาศ (24h)</h3>
+          <p class="chart-kicker">CANOPY · 24 HOURS</p><h3>อุณหภูมิและความชื้นอากาศ</h3>
           <canvas id="airTrendChart"></canvas>
         </div>
         <div class="chart-card">
-          <h3><i class="bi bi-flower1" aria-hidden="true"></i> แนวโน้มอุณหภูมิและความชื้นดิน (24h)</h3>
+          <p class="chart-kicker">ROOT ZONE · 24 HOURS</p><h3>อุณหภูมิและความชื้นดิน</h3>
           <canvas id="soilTrendChart"></canvas>
         </div>
       </section>
@@ -80,12 +98,14 @@
       <!-- Weather Forecast Section -->
       <section class="panel weather-panel">
         <div class="weather-header">
-          <h2 class="group-title"><i class="bi bi-cloud-sun-fill" aria-hidden="true"></i> พยากรณ์อากาศ 7 วัน</h2>
+          <div class="section-heading"><span class="section-index">03</span><div><p class="section-label">FIELD OUTLOOK</p><h2 class="group-title">พยากรณ์อากาศ 7 วัน</h2></div></div>
           <div class="weather-search-wrap">
             <div class="weather-search-box">
               <i class="bi bi-geo-alt-fill weather-search-icon" aria-hidden="true"></i>
               <input type="text" id="weatherSearchInput" class="weather-search-input"
-                     placeholder="ค้นหาพื้นที่ เช่น นายายอาม จันทบุรี" autocomplete="off" />
+                     placeholder="ค้นหาพื้นที่ เช่น นายายอาม จันทบุรี" autocomplete="off"
+                     aria-label="ค้นหาพื้นที่สำหรับพยากรณ์อากาศ" aria-controls="weatherSearchResults"
+                     aria-expanded="false" role="combobox" />
             </div>
             <ul id="weatherSearchResults" class="weather-search-results hidden"></ul>
           </div>
@@ -98,8 +118,9 @@
     </main>
 
     <footer class="footer">
-      <p class="footer-line1">คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเทคโนโลยีราชมงคลธัญบุรี</p>
-      <p class="footer-line2">สาขาวิชาการวิเคราะห์และจัดการข้อมูลขนาดใหญ่</p>
+      <p class="footer-mark">สวนพรรณมณี · FIELD STATION 01</p>
+      <div><p class="footer-line1">คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเทคโนโลยีราชมงคลธัญบุรี</p>
+      <p class="footer-line2">สาขาวิชาการวิเคราะห์และจัดการข้อมูลขนาดใหญ่</p></div>
     </footer>
 
     <script>
@@ -142,7 +163,7 @@
         applyStatusClass(document.getElementById("phCard"), data.ph_status);
 
         if (data.timestamp_ms) {
-          document.getElementById("updatedAt").textContent = "Updated: " + new Date(data.timestamp_ms).toLocaleString();
+          document.getElementById("updatedAt").textContent = "อัปเดต " + new Date(data.timestamp_ms).toLocaleString("th-TH");
         }
       }
 
@@ -244,10 +265,10 @@
       function scheduleReconnect() {
         clearReconnectTimer();
         if (!navigator.onLine) {
-          setTopBadgeStatus("Offline - waiting for network...");
+          setTopBadgeStatus("ออฟไลน์ · กำลังรอเครือข่าย");
           return;
         }
-        setTopBadgeStatus("Reconnecting...");
+        setTopBadgeStatus("กำลังเชื่อมต่อใหม่...");
         wsReconnectTimer = setTimeout(connectWs, wsBackoffMs);
         wsBackoffMs = Math.min(wsBackoffMs * 2, 10000);
       }
@@ -269,7 +290,7 @@
       function connectWs() {
         clearReconnectTimer();
         if (!navigator.onLine) {
-          setTopBadgeStatus("Offline - waiting for network...");
+          setTopBadgeStatus("ออฟไลน์ · กำลังรอเครือข่าย");
           return;
         }
         if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
@@ -304,12 +325,12 @@
       }
 
       window.addEventListener("offline", () => {
-        setTopBadgeStatus("Offline - waiting for network...");
+        setTopBadgeStatus("ออฟไลน์ · กำลังรอเครือข่าย");
         closeWs();
       });
 
       window.addEventListener("online", () => {
-        setTopBadgeStatus("Network restored - reconnecting...");
+        setTopBadgeStatus("เครือข่ายกลับมาแล้ว · กำลังเชื่อมต่อ");
         fetchLatestSnapshot();
         connectWs();
         refreshCharts();
@@ -535,6 +556,7 @@
         badge.classList.remove("hidden");
         const input = document.getElementById("weatherSearchInput");
         input.value = "";
+        input.setAttribute("aria-expanded", "false");
         input.blur();
         const ul = document.getElementById("weatherSearchResults");
         ul.classList.add("hidden");
@@ -544,7 +566,8 @@
 
       async function searchWeatherLocation(q) {
         const ul = document.getElementById("weatherSearchResults");
-        if (q.trim().length < 2) { ul.classList.add("hidden"); return; }
+        const input = document.getElementById("weatherSearchInput");
+        if (q.trim().length < 2) { ul.classList.add("hidden"); input.setAttribute("aria-expanded", "false"); return; }
         try {
           const res = await fetch(`/api/geocode?q=${encodeURIComponent(q.trim())}`);
           if (!res.ok) throw new Error(res.status);
@@ -556,13 +579,23 @@
             json.results.forEach((loc) => {
               const li = document.createElement("li");
               li.textContent = `${loc.name}${loc.admin1 ? ", " + loc.admin1 : ""}`;
+              li.tabIndex = 0;
+              li.setAttribute("role", "option");
               li.addEventListener("click", () => selectWeatherLocation(loc));
+              li.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  selectWeatherLocation(loc);
+                }
+              });
               ul.appendChild(li);
             });
           }
           ul.classList.remove("hidden");
+          input.setAttribute("aria-expanded", "true");
         } catch {
           ul.classList.add("hidden");
+          input.setAttribute("aria-expanded", "false");
         }
       }
 
@@ -571,9 +604,17 @@
         weatherSearchTimer = setTimeout(() => searchWeatherLocation(e.target.value), 400);
       });
 
+      document.getElementById("weatherSearchInput").addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          document.getElementById("weatherSearchResults").classList.add("hidden");
+          e.currentTarget.setAttribute("aria-expanded", "false");
+        }
+      });
+
       document.addEventListener("click", (e) => {
         if (!e.target.closest(".weather-search-wrap")) {
           document.getElementById("weatherSearchResults").classList.add("hidden");
+          document.getElementById("weatherSearchInput").setAttribute("aria-expanded", "false");
         }
       });
 
