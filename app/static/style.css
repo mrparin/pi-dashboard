@@ -265,9 +265,10 @@ button, input { font: inherit; }
 .weather-day-rain i, .weather-day-wind i { color: inherit; }
 
 .footer { display: grid; grid-template-columns: 5fr 7fr; gap: 30px; padding: 34px clamp(24px, 5vw, 76px); background: var(--forest-deep); color: #aabbb0; border-top: 1px solid rgba(255,255,255,.2); }
-.footer p { margin: 0; font-size: 11px; }
-.footer-mark { color: var(--leaf); font-weight: 800; letter-spacing: .08em; }
-.footer-line2 { margin-top: 5px !important; color: #788d80; }
+.footer p { margin: 0; font-size: 13px; line-height: 1.65; }
+.footer-mark { color: var(--leaf); font-size: 14px !important; font-weight: 800; letter-spacing: .08em; }
+.footer-line1 { color: #f2f4ed; font-size: 17px !important; font-weight: 700; }
+.footer-line2 { margin-top: 7px !important; color: #bdc9c1; font-size: 15px !important; font-weight: 500; }
 
 :focus-visible { outline: 3px solid var(--clay); outline-offset: 3px; }
 
