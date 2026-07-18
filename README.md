@@ -140,50 +140,164 @@ pkill -f "chromium|chromium-browser"
 - ถ้าหน้างานไม่ได้ใช้ broker ในเครื่องเดียวกัน ให้ตั้ง `MQTT_HOST` เป็น broker ปลายทาง
 - ถ้าเก็บข้อมูลจริงไว้ที่ server อยู่แล้ว แนะนำตั้ง `RETAIN_DAYS=90` (เก็บ local cache 3 เดือน)
 
-### 2) การ update software จาก git ใหม่
+### 2) การ deploy โค้ดเวอร์ชันใหม่จาก Git เข้า server
 
-ใช้เมื่อมีการเปลี่ยนแปลงซอฟต์แวร์ใหม่ใน repository
+ขั้นตอนนี้ใช้กับ server ที่ติดตั้งโปรเจกต์ไว้ที่ `/opt/durian-dashboard` และรันผ่าน
+`durian-dashboard.service` ตัวอย่างใช้ branch `02_addweather` และ user/group `bigdata`
+ให้ปรับชื่อ branch, user, path และ port ให้ตรงกับเครื่องจริง
+
+> **สำคัญ:** `data/durian_dashboard.db` เป็นฐานข้อมูล runtime ที่ service เขียนอยู่ตลอด
+> ห้าม `git pull`, `git stash`, `git reset --hard` หรือคัดลอกทับฐานข้อมูลขณะที่ service ยังทำงาน
+> ต้องหยุด service และสำรองฐานข้อมูลไว้นอก repository ก่อนทุกครั้ง
+
+#### 2.1 ตรวจสอบ service และ Git ก่อน deploy
 
 ```bash
+sudo systemctl cat durian-dashboard --no-pager
 cd /opt/durian-dashboard
-git status
+git status --short --branch
 git branch --show-current
 ```
 
-กรณีต้องการอัปเดต branch `02_addweather` (แนะนำ):
+ดึงข้อมูล remote โดยยังไม่แก้ working tree และตรวจ commits ที่กำลังจะนำขึ้น server:
 
 ```bash
 git fetch origin
-git switch 02_addweather
+git log --oneline --decorate HEAD..origin/02_addweather
+git show --stat --oneline --summary origin/02_addweather
+```
+
+ควรตรวจว่า commit ล่าสุดมีไฟล์ที่ต้องการ deploy จริง เช่น `app/templates/index.html`,
+`app/static/style.css` หรือ source code ที่เกี่ยวข้อง
+
+#### 2.2 หยุด service และสำรอง SQLite
+
+```bash
+sudo systemctl stop durian-dashboard
+systemctl is-active durian-dashboard
+```
+
+ผลที่คาดคือ `inactive` จากนั้นสำรองฐานข้อมูลพร้อมตรวจ checksum:
+
+```bash
+backup_file="/opt/durian-dashboard-backups/durian_dashboard_$(date +%Y%m%d_%H%M%S).db"
+sudo install -D -m 0640 -o bigdata -g bigdata \
+  /opt/durian-dashboard/data/durian_dashboard.db "$backup_file"
+echo "BACKUP=$backup_file"
+sha256sum /opt/durian-dashboard/data/durian_dashboard.db "$backup_file"
+```
+
+checksum ของไฟล์ต้นทางและ backup ต้องตรงกัน เก็บค่า `BACKUP=` ไว้ใช้ในขั้นตอนคืนข้อมูล
+
+#### 2.3 จัดการฐานข้อมูลที่ทำให้ Git conflict
+
+ตรวจสถานะอีกครั้ง:
+
+```bash
+cd /opt/durian-dashboard
+git status --short --branch
+```
+
+ถ้าฐานข้อมูลแสดงเป็น `UU data/durian_dashboard.db` แต่ไม่มี active merge ให้ล้างเฉพาะ
+สถานะ conflict ใน staging area โดยไม่แตะไฟล์ฐานข้อมูล:
+
+```bash
+git rev-parse -q --verify MERGE_HEAD
+git ls-files -u -- data/durian_dashboard.db
+git restore --staged data/durian_dashboard.db
+```
+
+เมื่อ backup สมบูรณ์และ service หยุดแล้ว ให้คืนฐานข้อมูลใน working tree เป็นเวอร์ชัน Git
+ชั่วคราว เพื่อเปิดทางให้ fast-forward pull:
+
+```bash
+git restore --worktree data/durian_dashboard.db
+git status --short --branch
+```
+
+ขั้นตอนนี้เปลี่ยนไฟล์ฐานข้อมูลใน working tree แต่ข้อมูลจริงยังอยู่ใน backup นอก repository
+
+#### 2.4 ดึงโค้ดเวอร์ชันใหม่
+
+```bash
 git pull --ff-only origin 02_addweather
 ```
 
-ถ้าโครงการใช้ branch `main`:
+ใช้ `--ff-only` เพื่อไม่ให้ server สร้าง merge commit โดยไม่ตั้งใจ หากคำสั่งล้มเหลว
+ให้หยุดตรวจ `git status` ก่อน ห้ามแก้ด้วย `reset --hard`
+
+#### 2.5 คืนฐานข้อมูลจริง
+
+แทน `<BACKUP_PATH>` ด้วย path จากบรรทัด `BACKUP=` ในขั้นตอนสำรอง:
 
 ```bash
-git pull --ff-only origin main
+sudo install -m 0640 -o bigdata -g bigdata \
+  <BACKUP_PATH> /opt/durian-dashboard/data/durian_dashboard.db
+sha256sum <BACKUP_PATH> /opt/durian-dashboard/data/durian_dashboard.db
 ```
 
-ถ้าโครงการใช้ branch `master`:
+checksum ต้องตรงกันก่อนเริ่ม service
+
+#### 2.6 ตรวจ dependencies และโหลดแอป
 
 ```bash
-git pull --ff-only origin master
+cd /opt/durian-dashboard
+./.venv/bin/python --version
+./.venv/bin/python -m pip check
+./.venv/bin/python -m pip install -r requirements.txt
+./.venv/bin/python -B -c \
+  "from app.main import app; print('APP_OK:', app.title, app.version)"
 ```
 
-ถ้า pull ไม่ได้เพราะมีไฟล์แก้ค้าง:
+ผลบรรทัดสุดท้ายควรขึ้นต้นด้วย `APP_OK:`
+
+#### 2.7 เริ่ม service และตรวจระบบ
 
 ```bash
-git stash
-git pull --ff-only origin 02_addweather
-git stash pop
+sudo systemctl start durian-dashboard
+sleep 3
+systemctl is-active durian-dashboard
+sudo systemctl status durian-dashboard --no-pager --full
 ```
 
-อัปเดต dependency/service หลัง pull:
+service ต้องเป็น `active (running)` และ log ควรแสดงว่า FastAPI, MQTT และ WebSocket
+เริ่มทำงานสำเร็จ จากนั้นตรวจหน้าเว็บและ API โดยใช้ port ที่กำหนดใน service
+(ตัวอย่างนี้ใช้ `8081`):
 
 ```bash
-sudo bash scripts/setup_pi_kiosk.sh --yes
-sudo systemctl restart durian-dashboard
+printf 'Dashboard: '
+curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8081/
+printf 'Latest API: '
+curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8081/api/latest
+curl -fsS http://127.0.0.1:8081/api/latest
 ```
+
+Dashboard และ Latest API ต้องตอบ `200` และ `/api/latest` ควรมีข้อมูล sensor ล่าสุด
+
+ตรวจสถานะ Git หลัง deploy:
+
+```bash
+cd /opt/durian-dashboard
+git status --short --branch
+```
+
+การเห็น `M data/durian_dashboard.db` หลังเปิด service เป็นเรื่องปกติ เพราะ MQTT เขียนข้อมูลใหม่
+และ `.venv/` อาจแสดงเป็น untracked หากยังไม่ได้อยู่ใน `.gitignore`
+
+#### 2.8 Rollback เฉพาะฐานข้อมูลเมื่อจำเป็น
+
+หาก service เริ่มไม่ได้เพราะฐานข้อมูลหลัง deploy ให้หยุด service ก่อน แล้วคืน backup:
+
+```bash
+sudo systemctl stop durian-dashboard
+sudo install -m 0640 -o bigdata -g bigdata \
+  <BACKUP_PATH> /opt/durian-dashboard/data/durian_dashboard.db
+sudo systemctl start durian-dashboard
+sudo systemctl status durian-dashboard --no-pager --full
+```
+
+ควรแก้ repository ต่อไปโดยเลิก track `data/durian_dashboard.db`, `.venv/` และ `__pycache__/`
+เพื่อป้องกัน conflict และไม่ส่งข้อมูล runtime ขึ้น Git
 
 ### 3) ติดตั้งไปยังเครื่อง server ใหม่ (user ไม่เหมือน Raspberry Pi)
 
@@ -263,7 +377,12 @@ RETAIN_DAYS
 APP_HOST
 APP_PORT
 REFRESH_SECONDS
+TMD_ACCESS_TOKEN
 ```
+
+`TMD_ACCESS_TOKEN` ใช้เรียกข้อมูลพยากรณ์จากกรมอุตุนิยมวิทยาเป็นแหล่งหลัก
+หากไม่ได้ตั้งค่า, token หมดอายุ, TMD ตอบ error/timeout หรือไม่มีข้อมูล ระบบจะใช้
+Open-Meteo เป็นแหล่งสำรองและระบุแหล่งข้อมูลบนหน้า Dashboard
 
 ### Data retention policy (local cache)
 

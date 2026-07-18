@@ -109,7 +109,10 @@
             </div>
             <ul id="weatherSearchResults" class="weather-search-results hidden"></ul>
           </div>
-          <span id="weatherLocationName" class="weather-location-badge hidden"></span>
+          <div class="weather-meta">
+            <span id="weatherLocationName" class="weather-location-badge hidden"></span>
+            <span id="weatherSourceName" class="weather-source-badge">ยังไม่ได้เลือกแหล่งข้อมูล</span>
+          </div>
         </div>
         <div id="weatherForecast" class="weather-forecast-grid">
           <p class="weather-empty">กรุณาค้นหาและเลือกพื้นที่เพื่อดูพยากรณ์อากาศ</p>
@@ -511,11 +514,12 @@
           const dayLabel = i === 0 ? "วันนี้" : DAYS_TH[d.getDay()];
           const wmoCode = daily.weathercode[i];
           const icon = WMO_ICONS[wmoCode] || "bi-cloud";
-          const desc = WMO_DESC_TH[wmoCode] || "ไม่ทราบ";
+          const desc = daily.condition_text?.[i] || WMO_DESC_TH[wmoCode] || "ไม่ทราบ";
           const tmax = daily.temperature_2m_max[i] != null ? Number(daily.temperature_2m_max[i]).toFixed(1) : "-";
           const tmin = daily.temperature_2m_min[i] != null ? Number(daily.temperature_2m_min[i]).toFixed(1) : "-";
           const rain = daily.precipitation_sum[i] != null ? Number(daily.precipitation_sum[i]).toFixed(1) : "-";
           const rainProb = daily.precipitation_probability_max[i] ?? "-";
+          const rainSummary = rainProb === "-" ? `${rain} มม.` : `${rainProb}% · ${rain} มม.`;
           const wind = daily.windspeed_10m_max[i] != null ? Number(daily.windspeed_10m_max[i]).toFixed(1) : "-";
           const card = document.createElement("div");
           card.className = "weather-day-card";
@@ -529,7 +533,7 @@
               <span class="temp-sep">/</span>
               <span class="temp-min">${tmin}°</span>
             </div>
-            <div class="weather-day-rain"><i class="bi bi-droplet-fill" aria-hidden="true"></i> ${rainProb}% · ${rain} มม.</div>
+            <div class="weather-day-rain"><i class="bi bi-droplet-fill" aria-hidden="true"></i> ${rainSummary}</div>
             <div class="weather-day-wind"><i class="bi bi-wind" aria-hidden="true"></i> ${wind} km/h</div>
           `;
           container.appendChild(card);
@@ -538,13 +542,20 @@
 
       async function loadWeather(lat, lon) {
         const container = document.getElementById("weatherForecast");
+        const sourceBadge = document.getElementById("weatherSourceName");
         container.innerHTML = '<p class="weather-empty">กำลังโหลดพยากรณ์อากาศ...</p>';
+        sourceBadge.textContent = "กำลังตรวจสอบข้อมูล TMD...";
+        sourceBadge.className = "weather-source-badge";
         try {
           const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
           if (!res.ok) throw new Error(res.status);
           const data = await res.json();
+          sourceBadge.textContent = `ข้อมูล: ${data.source_label || "ไม่ทราบแหล่งข้อมูล"}`;
+          sourceBadge.className = `weather-source-badge ${data.source === "open_meteo" ? "is-fallback" : "is-primary"}`;
           renderWeatherCards(data);
         } catch {
+          sourceBadge.textContent = "แหล่งข้อมูลพยากรณ์ไม่พร้อมใช้งาน";
+          sourceBadge.className = "weather-source-badge is-error";
           container.innerHTML = '<p class="weather-empty weather-error"><i class="bi bi-exclamation-triangle-fill"></i> โหลดพยากรณ์อากาศไม่สำเร็จ</p>';
         }
       }

@@ -3,6 +3,11 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -17,6 +22,8 @@ class Settings:
     app_host: str = os.getenv("APP_HOST", "0.0.0.0")
     app_port: int = int(os.getenv("APP_PORT", "8080"))
     refresh_seconds: int = int(os.getenv("REFRESH_SECONDS", "3"))
+
+    tmd_access_token: str = os.getenv("TMD_ACCESS_TOKEN", "").strip()
 
 
 settings = Settings()
