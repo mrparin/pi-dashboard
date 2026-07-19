@@ -15,7 +15,8 @@ Environment=MQTT_QOS=1
 Environment=DB_PATH=/opt/durian-dashboard/data/durian_dashboard.db
 Environment=RETAIN_DAYS=90
 Environment=REFRESH_SECONDS=3
-ExecStart=/opt/durian-dashboard/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 1
+Environment=FRONTEND_ORIGINS=http://localhost:3001
+ExecStart=/opt/durian-dashboard/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1
 Restart=always
 RestartSec=5
 

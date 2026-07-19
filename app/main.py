@@ -7,10 +7,9 @@ from contextlib import asynccontextmanager
 from typing import Any, Literal
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.db import Database
@@ -61,20 +60,19 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Durian Dashboard", version="0.1.0", lifespan=lifespan)
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-templates = Jinja2Templates(directory="app/templates")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=list(settings.frontend_origins),
+    allow_credentials=False,
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "refresh_seconds": settings.refresh_seconds,
-            "topic": settings.mqtt_topic,
-        },
-    )
+@app.get("/api/health")
+async def api_health() -> JSONResponse:
+    """Health check for the reverse proxy and deployment checks."""
+    return JSONResponse(content={"status": "ok", "mqtt_topic": settings.mqtt_topic})
 
 
 @app.get("/api/latest")

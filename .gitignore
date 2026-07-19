@@ -1,6 +1,9 @@
 __pycache__/
 *.pyc
 venv/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
 .env
 *.db-shm
 *.db-wal

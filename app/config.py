@@ -22,6 +22,11 @@ class Settings:
     app_host: str = os.getenv("APP_HOST", "0.0.0.0")
     app_port: int = int(os.getenv("APP_PORT", "8080"))
     refresh_seconds: int = int(os.getenv("REFRESH_SECONDS", "3"))
+    frontend_origins: tuple[str, ...] = tuple(
+        origin.strip()
+        for origin in os.getenv("FRONTEND_ORIGINS", "http://localhost:3001").split(",")
+        if origin.strip()
+    )
 
     tmd_access_token: str = os.getenv("TMD_ACCESS_TOKEN", "").strip()
 
