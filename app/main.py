@@ -19,6 +19,12 @@ from app.service import DataService
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
 
+THAI_LOCATION_DATA_URL = (
+    "https://raw.githubusercontent.com/kongvut/thai-province-data/"
+    "refs/heads/master/api/latest/province_with_district_and_sub_district.json"
+)
+thai_location_cache: list[dict[str, Any]] | None = None
+
 
 db = Database(settings.db_path)
 service = DataService(db)
@@ -131,6 +137,50 @@ async def api_geocode(q: str = Query(..., min_length=1, max_length=100)) -> JSON
         for r in data.get("results", [])
     ]
     return JSONResponse(content={"results": results})
+
+
+@app.get("/api/thai-locations")
+async def api_thai_locations() -> JSONResponse:
+    """Return a compact province/district/sub-district tree for cascading selects."""
+    global thai_location_cache
+    if thai_location_cache is None:
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.get(THAI_LOCATION_DATA_URL)
+                response.raise_for_status()
+                source = response.json()
+        except (httpx.HTTPError, ValueError, TypeError) as exc:
+            logger.error("Thai location dataset unavailable: %s", exc)
+            raise HTTPException(status_code=502, detail="Thai location dataset unavailable") from exc
+
+        thai_location_cache = [
+            {
+                "id": province.get("id"),
+                "name": province.get("name_th"),
+                "districts": [
+                    {
+                        "id": district.get("id"),
+                        "name": district.get("name_th"),
+                        "sub_districts": [
+                            {
+                                "id": sub_district.get("id"),
+                                "name": sub_district.get("name_th"),
+                                "lat": sub_district.get("lat"),
+                                "lon": sub_district.get("long"),
+                            }
+                            for sub_district in district.get("sub_districts", [])
+                            if sub_district.get("deleted_at") is None
+                        ],
+                    }
+                    for district in province.get("districts", [])
+                    if district.get("deleted_at") is None
+                ],
+            }
+            for province in source
+            if province.get("deleted_at") is None
+        ]
+
+    return JSONResponse(content={"provinces": thai_location_cache})
 
 
 TMD_CONDITIONS: dict[int, tuple[str, int]] = {

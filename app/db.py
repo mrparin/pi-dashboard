@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import sqlite3
 import threading
 import time
@@ -144,20 +145,30 @@ class Database:
             return []
 
         min_ts = int(time.time() * 1000) - (hours * 60 * 60 * 1000)
+        bucket_ms = max(60_000, math.ceil((hours * 60 * 60 * 1000) / limit))
         sql = f"""
-            SELECT timestamp_ms, {field} AS value, node, zone
+            SELECT
+                CAST(timestamp_ms / ? AS INTEGER) * ? AS timestamp_ms,
+                AVG({field}) AS value,
+                MAX(node) AS node,
+                MAX(zone) AS zone
             FROM samples
             WHERE timestamp_ms >= ? AND {field} IS NOT NULL
+            GROUP BY CAST(timestamp_ms / ? AS INTEGER)
             ORDER BY timestamp_ms ASC
             LIMIT ?
         """
         with self._lock:
             try:
-                rows = self._conn.execute(sql, (min_ts, limit)).fetchall()
+                rows = self._conn.execute(
+                    sql, (bucket_ms, bucket_ms, min_ts, bucket_ms, limit)
+                ).fetchall()
             except sqlite3.DatabaseError as exc:
                 if not self._recover_if_malformed(exc):
                     raise
-                rows = self._conn.execute(sql, (min_ts, limit)).fetchall()
+                rows = self._conn.execute(
+                    sql, (bucket_ms, bucket_ms, min_ts, bucket_ms, limit)
+                ).fetchall()
         return [dict(r) for r in rows]
 
     def cleanup_old_data(self, retain_days: int) -> int:

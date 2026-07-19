@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import WeatherForecast from "./WeatherForecast";
+import HistoryCharts from "./HistoryCharts";
+import SensorIcon from "./SensorIcon";
 
 type Reading = Record<string, number | string | null | undefined>;
 
 const metrics = [
-  ["air_temp", "อุณหภูมิอากาศ", "°C", "CANOPY"],
-  ["air_humi", "ความชื้นอากาศ", "%RH", "CANOPY"],
-  ["vpd_kpa", "ค่า VPD", "kPa", "CANOPY"],
-  ["soil_temp", "อุณหภูมิดิน", "°C", "ROOT ZONE"],
-  ["soil_humi", "ความชื้นดิน", "%", "ROOT ZONE"],
-  ["ph", "ค่า pH ดิน", "pH", "ROOT ZONE"],
+  ["air_temp", "อุณหภูมิอากาศ", "°C", "CANOPY", "temperature"],
+  ["air_humi", "ความชื้นอากาศ", "%RH", "CANOPY", "humidity"],
+  ["vpd_kpa", "ค่า VPD", "kPa", "CANOPY", "vpd"],
+  ["soil_temp", "อุณหภูมิดิน", "°C", "ROOT ZONE", "soil-temperature"],
+  ["soil_humi", "ความชื้นดิน", "%", "ROOT ZONE", "soil-moisture"],
+  ["ph", "ค่า pH ดิน", "pH", "ROOT ZONE", "ph"],
 ] as const;
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "";
@@ -76,8 +79,8 @@ export default function Home() {
           <div className="live-status"><span className="pulse" />{connection}<small>อัปเดต {updated}</small></div>
         </div>
         <div className="metric-grid">
-          {metrics.map(([key, label, unit, group]) => <article className="metric" key={key}>
-            <p>{group}</p><h3>{label}</h3><strong>{number(reading[key], key === "vpd_kpa" || key === "ph" ? 2 : 1)}<small>{unit}</small></strong>
+          {metrics.map(([key, label, unit, group, icon]) => <article className="metric" key={key}>
+            <div className="metric-top"><p>{group}</p><SensorIcon type={icon} /></div><h3>{label}</h3><strong>{number(reading[key], key === "vpd_kpa" || key === "ph" ? 2 : 1)}<small>{unit}</small></strong>
           </article>)}
         </div>
         <div className="advice-grid">
@@ -85,7 +88,15 @@ export default function Home() {
           <article><p className="eyebrow">ROOT ZONE DECISION</p><h3>คำแนะนำจาก pH</h3><strong>{String(reading.ph_status ?? "กำลังรอข้อมูล")}</strong><p>{String(reading.ph_message ?? "ระบบจะแสดงคำแนะนำเมื่อสถานีส่งข้อมูลเข้ามา")}</p></article>
         </div>
       </section>
-      <footer>สวนพรรณมณี · ระบบติดตามสภาพแปลงทุเรียนแบบเรียลไทม์</footer>
+      <HistoryCharts />
+      <WeatherForecast />
+      <footer>
+        <div className="footer-organization">
+          <strong>คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเทคโนโลยีราชมงคลธัญบุรี</strong>
+          <span>สาขาวิชาการวิเคราะห์และจัดการข้อมูลขนาดใหญ่</span>
+        </div>
+        <small>สวนพรรณมณี · ระบบติดตามสภาพแปลงทุเรียนแบบเรียลไทม์</small>
+      </footer>
     </main>
   );
 }
