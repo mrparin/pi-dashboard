@@ -519,7 +519,7 @@
           const tmin = daily.temperature_2m_min[i] != null ? Number(daily.temperature_2m_min[i]).toFixed(1) : "-";
           const rain = daily.precipitation_sum[i] != null ? Number(daily.precipitation_sum[i]).toFixed(1) : "-";
           const rainProb = daily.precipitation_probability_max[i] ?? "-";
-          const rainSummary = rainProb === "-" ? `${rain} มม.` : `${rainProb}% · ${rain} มม.`;
+          const rainChance = rainProb === "-" ? "ไม่มีข้อมูล" : `${Number(rainProb).toFixed(0)}%`;
           const wind = daily.windspeed_10m_max[i] != null ? Number(daily.windspeed_10m_max[i]).toFixed(1) : "-";
           const card = document.createElement("div");
           card.className = "weather-day-card";
@@ -533,7 +533,8 @@
               <span class="temp-sep">/</span>
               <span class="temp-min">${tmin}°</span>
             </div>
-            <div class="weather-day-rain"><i class="bi bi-droplet-fill" aria-hidden="true"></i> ${rainSummary}</div>
+            <div class="weather-day-rain-chance"><i class="bi bi-cloud-rain-fill" aria-hidden="true"></i> โอกาสเกิดฝน ${rainChance}</div>
+            <div class="weather-day-rain"><i class="bi bi-droplet-fill" aria-hidden="true"></i> ปริมาณฝน ${rain} มม.</div>
             <div class="weather-day-wind"><i class="bi bi-wind" aria-hidden="true"></i> ${wind} km/h</div>
           `;
           container.appendChild(card);

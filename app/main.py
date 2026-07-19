@@ -252,6 +252,22 @@ async def fetch_open_meteo_forecast(
     return data
 
 
+async def add_rain_probability(
+    forecast: dict[str, Any],
+    client: httpx.AsyncClient,
+    lat: float,
+    lon: float,
+) -> None:
+    """Populate rain probability when the primary forecast provider omits it."""
+    probability_forecast = await fetch_open_meteo_forecast(
+        client, lat, lon, "rain_probability"
+    )
+    forecast["daily"]["precipitation_probability_max"] = probability_forecast[
+        "daily"
+    ]["precipitation_probability_max"]
+    forecast["rain_probability_source"] = "open_meteo"
+
+
 @app.get("/api/weather")
 async def api_weather(
     lat: float = Query(..., ge=-90, le=90),
@@ -262,7 +278,12 @@ async def api_weather(
     async with httpx.AsyncClient(timeout=10) as client:
         if settings.tmd_access_token:
             try:
-                return JSONResponse(content=await fetch_tmd_forecast(client, lat, lon))
+                forecast = await fetch_tmd_forecast(client, lat, lon)
+                try:
+                    await add_rain_probability(forecast, client, lat, lon)
+                except (httpx.HTTPError, ValueError, TypeError, KeyError) as exc:
+                    logger.warning("Rain probability unavailable from Open-Meteo: %s", exc)
+                return JSONResponse(content=forecast)
             except (httpx.HTTPError, ValueError, TypeError, KeyError) as exc:
                 fallback_reason = "tmd_unavailable"
                 logger.warning("TMD forecast unavailable; using Open-Meteo fallback: %s", exc)

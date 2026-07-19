@@ -254,15 +254,16 @@ button, input { font: inherit; }
 .weather-day-card:first-child { background: var(--forest); color: #fff; }
 .weather-day-label { font-size: 13px; font-weight: 800; }
 .weather-day-date { color: var(--muted); font-size: 11px; }
-.weather-day-card:first-child .weather-day-date, .weather-day-card:first-child .weather-day-desc, .weather-day-card:first-child .weather-day-rain, .weather-day-card:first-child .weather-day-wind { color: #becbc2; }
+.weather-day-card:first-child .weather-day-date, .weather-day-card:first-child .weather-day-desc, .weather-day-card:first-child .weather-day-rain-chance, .weather-day-card:first-child .weather-day-rain, .weather-day-card:first-child .weather-day-wind { color: #becbc2; }
 .weather-day-icon { margin: 10px 0 3px; color: var(--clay); font-size: 28px; line-height: 1; }
 .weather-day-desc { min-height: 38px; color: var(--ink-soft); font-size: 11px; }
 .weather-day-temp { display: flex; align-items: baseline; gap: 4px; font-family: var(--font-display); font-size: 21px; font-weight: 700; }
 .temp-max { color: var(--clay); }
 .temp-sep { color: var(--muted); font-weight: 400; }
 .temp-min { color: var(--info); }
-.weather-day-rain, .weather-day-wind { color: var(--muted); font-size: 10px; }
-.weather-day-rain i, .weather-day-wind i { color: inherit; }
+.weather-day-rain-chance, .weather-day-rain, .weather-day-wind { color: var(--muted); font-size: 10px; }
+.weather-day-rain-chance { color: var(--info); font-weight: 700; }
+.weather-day-rain-chance i, .weather-day-rain i, .weather-day-wind i { color: inherit; }
 
 .footer { display: grid; grid-template-columns: 5fr 7fr; gap: 30px; padding: 34px clamp(24px, 5vw, 76px); background: var(--forest-deep); color: #aabbb0; border-top: 1px solid rgba(255,255,255,.2); }
 .footer p { margin: 0; font-size: 13px; line-height: 1.65; }
