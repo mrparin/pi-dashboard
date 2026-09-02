@@ -1,3 +1,6 @@
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
 import pytest
 
 from app.db import Database
@@ -35,4 +38,26 @@ def test_daily_eto_is_integrated_and_long_gaps_are_not_filled(tmp_path) -> None:
     assert first["eto_mm_day_est"] == 0.0
     assert second["eto_mm_day_est"] == pytest.approx(0.15)
     assert after_gap["eto_mm_day_est"] == pytest.approx(0.15)
+    db.close()
+
+
+def test_daily_eto_returns_last_observed_total_for_each_thai_day(tmp_path) -> None:
+    timezone = ZoneInfo("Asia/Bangkok")
+    today = datetime.now(timezone).replace(hour=8, minute=0, second=0, microsecond=0)
+    yesterday = today - timedelta(days=1)
+    db = Database(str(tmp_path / "daily.db"))
+
+    rows = [
+        sample(int(yesterday.timestamp() * 1000), 0.2),
+        sample(int((yesterday + timedelta(hours=1)).timestamp() * 1000), 0.4),
+        sample(int(today.timestamp() * 1000), 0.1),
+        sample(int((today + timedelta(hours=1)).timestamp() * 1000), 0.3),
+    ]
+    for row in rows:
+        db.insert_sample(row)
+
+    points = db.get_eto_daily(days=2)
+
+    assert [point["date"] for point in points] == [yesterday.date().isoformat(), today.date().isoformat()]
+    assert [point["value"] for point in points] == pytest.approx([0.3, 0.2])
     db.close()
