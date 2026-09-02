@@ -18,7 +18,7 @@ function formatValue(value: number) {
   return Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(2);
 }
 
-function LineChart({ title, period, series, icon, controls = false }: { title: string; period: string; series: Series[]; icon: SensorIconType; controls?: boolean }) {
+function LineChart({ title, period, series, icon, controls = false, note, dateOnly = false }: { title: string; period: string; series: Series[]; icon: SensorIconType; controls?: boolean; note?: string; dateOnly?: boolean }) {
   const scroller = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<HoverState | null>(null);
   const gradientPrefix = useId().replace(/:/g, "");
@@ -70,6 +70,7 @@ function LineChart({ title, period, series, icon, controls = false }: { title: s
 
   return <article className="trend-card">
     <header className="trend-card-head"><div className="trend-title"><SensorIcon type={icon} /><div><p className="eyebrow">{period}</p><h3>{title}</h3></div></div>{controls && <div className="chart-controls"><button onClick={() => move(-1)} aria-label="เลื่อนกราฟไปทางซ้าย">←</button><button onClick={() => move(1)} aria-label="เลื่อนกราฟไปทางขวา">→</button></div>}</header>
+    {note && <p className="chart-note">{note}</p>}
     <div className="chart-legend">{series.map((item) => {
       const values = item.points.map((point) => point.value);
       return <span key={item.label}><i style={{ background: item.color }} />{item.label}<small>{Math.min(...values).toFixed(1)}–{Math.max(...values).toFixed(1)} {item.unit}</small></span>;
@@ -84,14 +85,14 @@ function LineChart({ title, period, series, icon, controls = false }: { title: s
           </linearGradient>)}
         </defs>
         {[0, 1, 2, 3, 4].map((line) => { const y = plot.top + line * ((chartHeight - plot.top - plot.bottom) / 4); return <line key={line} x1={plot.left} y1={y} x2={chartWidth - plot.right} y2={y} className="chart-grid-line" />; })}
-        {[0, .25, .5, .75, 1].map((part) => { const timestamp = timeMin + (timeMax - timeMin) * part; const px = plot.left + part * (chartWidth - plot.left - plot.right); return <g key={part}><line x1={px} y1={plot.top} x2={px} y2={chartHeight - plot.bottom} className="chart-grid-line vertical" /><text x={px} y={chartHeight - 15} textAnchor={part === 0 ? "start" : part === 1 ? "end" : "middle"}>{new Date(timestamp).toLocaleString("th-TH", { day: period === "7 DAYS" ? "numeric" : undefined, hour: "2-digit", minute: "2-digit" })}</text></g>; })}
+        {[0, .25, .5, .75, 1].map((part) => { const timestamp = timeMin + (timeMax - timeMin) * part; const px = plot.left + part * (chartWidth - plot.left - plot.right); const label = dateOnly ? new Date(timestamp).toLocaleDateString("th-TH", { day: "numeric", month: "short" }) : new Date(timestamp).toLocaleString("th-TH", { day: period === "7 DAYS" ? "numeric" : undefined, hour: "2-digit", minute: "2-digit" }); return <g key={part}><line x1={px} y1={plot.top} x2={px} y2={chartHeight - plot.bottom} className="chart-grid-line vertical" /><text x={px} y={chartHeight - 15} textAnchor={part === 0 ? "start" : part === 1 ? "end" : "middle"}>{label}</text></g>; })}
         {series.map((item, index) => <path className="chart-area" key={`${item.label}-area`} d={areaFor(item)} fill={`url(#${gradientPrefix}-area-${index})`} />)}
         {series.map((item) => <path key={item.label} d={pathFor(item)} fill="none" stroke={item.color} strokeWidth="3" vectorEffect="non-scaling-stroke" />)}
         {series.flatMap((item) => item.points.filter((_, index) => index % Math.max(1, Math.floor(item.points.length / 30)) === 0).map((point) => <circle key={`${item.label}-${point.timestamp_ms}`} cx={x(point.timestamp_ms)} cy={yFor(item, point.value)} r="4" fill={item.color} />))}
         {hover && <g className="chart-hover-marker" aria-hidden="true"><line x1={hover.x} y1={plot.top} x2={hover.x} y2={chartHeight - plot.bottom} />{hover.values.map((item) => <circle key={item.label} cx={hover.x} cy={item.y} r="6" fill={item.color} />)}</g>}
       </svg>
       {hover && <div className="chart-tooltip" style={{ left: Math.min(Math.max(hover.x - 105, 8), chartWidth - 218) }} role="status">
-        <time>{new Date(hover.timestamp).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}</time>
+        <time>{dateOnly ? new Date(hover.timestamp).toLocaleDateString("th-TH", { dateStyle: "medium" }) : new Date(hover.timestamp).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}</time>
         {hover.values.map((item) => <div key={item.label}><i style={{ background: item.color }} /><span>{item.label}</span><strong>{formatValue(item.value)} {item.unit}</strong></div>)}
       </div>}
       </div>
@@ -107,14 +108,17 @@ export default function HistoryCharts() {
     let active = true;
     async function load() {
       try {
-        const specs = [["vpd_kpa", 24], ["air_temp", 24], ["air_humi", 24], ["soil_temp", 24], ["soil_humi", 24], ["ph", 168]] as const;
+        const specs = [["vpd_kpa", 24], ["air_temp", 24], ["air_humi", 24], ["soil_temp", 24], ["soil_humi", 24], ["ph", 168], ["eto_mm_h_est", 24]] as const;
         const responses = await Promise.all(specs.map(async ([field, hours]) => {
           const response = await fetch(`${apiBase}/api/history?field=${field}&hours=${hours}`, { cache: "no-store" });
           if (!response.ok) throw new Error("history request failed");
           return [field, (await response.json()).points ?? []] as const;
         }));
+        const dailyResponse = await fetch(`${apiBase}/api/eto/daily?days=7`, { cache: "no-store" });
+        if (!dailyResponse.ok) throw new Error("daily eto request failed");
+        const dailyEto = (await dailyResponse.json()).points ?? [];
         if (!active) return;
-        const next = Object.fromEntries(responses);
+        const next = { ...Object.fromEntries(responses), eto_daily: dailyEto };
         setHistory(next);
         setState(Object.values(next).some((points) => points.length > 1) ? "ready" : "empty");
       } catch { if (active) setState("error"); }
@@ -129,6 +133,8 @@ export default function HistoryCharts() {
     { title: "อุณหภูมิและความชื้นอากาศ", period: "24 HOURS", icon: "humidity" as const, series: [{ label: "อุณหภูมิ", unit: "°C", color: "#b9663d", points: history.air_temp ?? [] }, { label: "ความชื้น", unit: "%RH", color: "#3d7d79", points: history.air_humi ?? [] }] },
     { title: "อุณหภูมิและความชื้นดิน", period: "24 HOURS", icon: "soil-moisture" as const, series: [{ label: "อุณหภูมิดิน", unit: "°C", color: "#8b633f", points: history.soil_temp ?? [] }, { label: "ความชื้นดิน", unit: "%", color: "#6c8845", points: history.soil_humi ?? [] }] },
     { title: "แนวโน้มค่า pH ดิน", period: "7 DAYS", icon: "ph" as const, series: [{ label: "pH", unit: "pH", color: "#5876a3", points: history.ph ?? [] }] },
+    { title: "อัตรา ET₀ รายชั่วโมง", period: "24 HOURS", icon: "eto" as const, note: "ค่าประมาณจาก Lux · หน่วยมิลลิเมตรต่อชั่วโมง", series: [{ label: "ET₀", unit: "มม./ชม.", color: "#2f7890", points: history.eto_mm_h_est ?? [] }] },
+    { title: "ET₀ รวมรายวัน", period: "7 DAYS", icon: "eto" as const, dateOnly: true, note: "ผลรวมเฉพาะช่วงที่สถานีมีข้อมูลต่อเนื่อง", series: [{ label: "ET₀ ต่อวัน", unit: "มม.", color: "#2f7890", points: history.eto_daily ?? [] }] },
   ], [history, state]);
 
   return <section className="trends" aria-labelledby="trends-title"><div className="trends-heading"><p className="eyebrow">FIELD HISTORY</p><h2 id="trends-title">แนวโน้มเพื่อการตัดสินใจ</h2><p>ข้อมูลย้อนหลังถูกเฉลี่ยเป็นช่วงเวลาเพื่อให้เห็นภาพตลอดช่วง โดยยังคงข้อมูลต้นฉบับไว้ในฐานข้อมูล</p></div>

@@ -100,6 +100,14 @@ async def api_history(
     return JSONResponse(content={"field": field, "hours": hours, "points": rows})
 
 
+@app.get("/api/eto/daily")
+async def api_eto_daily(
+    days: int = Query(7, ge=1, le=31),
+) -> JSONResponse:
+    points = service.get_eto_daily(days=days)
+    return JSONResponse(content={"days": days, "points": points})
+
+
 # --- New: API for scatter plot pairs ---
 @app.get("/api/scatter")
 async def api_scatter(

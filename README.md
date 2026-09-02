@@ -440,6 +440,8 @@ pytest -q
 
 - `GET /api/latest`
 - `GET /api/history?field=vpd_kpa&hours=24`
+- `GET /api/history?field=eto_mm_h_est&hours=24`
+- `GET /api/eto/daily?days=7`
 - `WS /ws`
 
 ## Payload example

@@ -83,6 +83,19 @@ export default function Home() {
             <div className="metric-top"><p>{group}</p><SensorIcon type={icon} /></div><h3>{label}</h3><strong>{number(reading[key], key === "vpd_kpa" || key === "ph" ? 2 : 1)}<small>{unit}</small></strong>
           </article>)}
         </div>
+        <article className="eto-summary" aria-labelledby="eto-summary-title">
+          <div className="eto-summary-icon"><SensorIcon type="eto" /></div>
+          <div className="eto-summary-copy">
+            <p className="eyebrow">WATER BALANCE · ESTIMATED FROM LUX</p>
+            <h3 id="eto-summary-title">ET₀ สะสมวันนี้</h3>
+            <p>การคายระเหยน้ำของพืชอ้างอิงสะสมตั้งแต่เวลา 00:00 จากช่วงที่สถานีมีข้อมูลต่อเนื่อง</p>
+          </div>
+          <div className="eto-summary-value">
+            <strong>{number(reading.eto_mm_day_est, 2)}<small>มม.</small></strong>
+            <span>อัตราล่าสุด {number(reading.eto_mm_h_est, 3)} มม./ชม.</span>
+          </div>
+          <p className="eto-estimate-note">ค่าประมาณจาก Lux · ใช้ติดตามแนวโน้ม ยังไม่ใช่คำสั่งให้น้ำ</p>
+        </article>
         <div className="advice-grid">
           <article><p className="eyebrow">CANOPY DECISION</p><h3>คำแนะนำจาก VPD</h3><strong>{String(reading.vpd_status ?? "กำลังรอข้อมูล")}</strong><p>{String(reading.vpd_message ?? "ระบบจะแสดงคำแนะนำเมื่อสถานีส่งข้อมูลเข้ามา")}</p></article>
           <article><p className="eyebrow">ROOT ZONE DECISION</p><h3>คำแนะนำจาก pH</h3><strong>{String(reading.ph_status ?? "กำลังรอข้อมูล")}</strong><p>{String(reading.ph_message ?? "ระบบจะแสดงคำแนะนำเมื่อสถานีส่งข้อมูลเข้ามา")}</p></article>
