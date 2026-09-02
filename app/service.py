@@ -82,5 +82,8 @@ class DataService:
     def get_history(self, field: str, hours: int) -> list[dict[str, Any]]:
         return self.db.get_history(field, hours=hours)
 
+    def get_eto_daily(self, days: int) -> list[dict[str, Any]]:
+        return self.db.get_eto_daily(days=days)
+
     def get_scatter(self, xfield: str, yfield: str, hours: int) -> list[dict[str, Any]]:
         return self.db.get_scatter(xfield, yfield, hours=hours)
