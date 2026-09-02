@@ -6,14 +6,16 @@ from threading import Lock
 from typing import Any
 
 from app.db import Database
+from app.config import Settings
 from app.logic import normalize_payload
 
 logger = logging.getLogger(__name__)
 
 
 class DataService:
-    def __init__(self, db: Database) -> None:
+    def __init__(self, db: Database, settings: Settings | None = None) -> None:
         self.db = db
+        self.settings = settings or Settings()
         self._latest: dict[str, Any] | None = None
         self._latest_lock = Lock()
 
@@ -26,7 +28,11 @@ class DataService:
             logger.warning("Skipping invalid MQTT payload")
             return
 
-        sample = normalize_payload(payload)
+        try:
+            sample = normalize_payload(payload, self.settings)
+        except (TypeError, ValueError, OverflowError) as exc:
+            logger.warning("Skipping invalid MQTT payload: %s", exc)
+            return
 
         defaults = {
             "air_temp": None,
