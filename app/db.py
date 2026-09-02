@@ -5,7 +5,7 @@ import math
 import sqlite3
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -189,7 +189,8 @@ class Database:
 
     def get_history(self, field: str, hours: int = 24, limit: int = 1000) -> list[dict[str, Any]]:
         safe_fields = {
-            "air_temp", "air_humi", "vpd_kpa", "ph", "soil_temp", "soil_humi", "ec", "lux", "eto_mm_day_est"
+            "air_temp", "air_humi", "vpd_kpa", "ph", "soil_temp", "soil_humi", "ec", "lux",
+            "eto_mm_h_est", "eto_mm_day_est"
         }
         if field not in safe_fields:
             return []
@@ -220,6 +221,43 @@ class Database:
                     sql, (bucket_ms, bucket_ms, min_ts, bucket_ms, limit)
                 ).fetchall()
         return [dict(r) for r in rows]
+
+    def get_eto_daily(self, days: int = 7) -> list[dict[str, Any]]:
+        """Return the final observed cumulative ET0 for each local calendar day."""
+        now_local = datetime.now(self._timezone)
+        first_day = now_local.date() - timedelta(days=days - 1)
+        start_local = datetime.combine(first_day, datetime.min.time(), self._timezone)
+        min_ts = int(start_local.timestamp() * 1000)
+        sql = """
+            SELECT timestamp_ms, eto_mm_day_est
+            FROM samples
+            WHERE timestamp_ms >= ? AND eto_mm_day_est IS NOT NULL
+            ORDER BY timestamp_ms ASC
+        """
+        with self._lock:
+            try:
+                rows = self._conn.execute(sql, (min_ts,)).fetchall()
+            except sqlite3.DatabaseError as exc:
+                if not self._recover_if_malformed(exc):
+                    raise
+                rows = self._conn.execute(sql, (min_ts,)).fetchall()
+
+        totals: dict[str, float] = {}
+        for row in rows:
+            local = datetime.fromtimestamp(row["timestamp_ms"] / 1000.0, self._timezone)
+            key = local.date().isoformat()
+            value = float(row["eto_mm_day_est"])
+            totals[key] = max(totals.get(key, 0.0), value)
+
+        points: list[dict[str, Any]] = []
+        for date_key, value in sorted(totals.items()):
+            local_midnight = datetime.fromisoformat(date_key).replace(tzinfo=self._timezone)
+            points.append({
+                "date": date_key,
+                "timestamp_ms": int(local_midnight.timestamp() * 1000),
+                "value": value,
+            })
+        return points
 
     def cleanup_old_data(self, retain_days: int) -> int:
         min_ts = int(time.time() * 1000) - (retain_days * 24 * 60 * 60 * 1000)
