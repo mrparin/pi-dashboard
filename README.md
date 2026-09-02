@@ -16,7 +16,8 @@ Lightweight MQTT dashboard for Raspberry Pi 3 without Node-RED, InfluxDB, or Thi
 - Calculates derived metrics:
   - `es_kpa`, `ea_kpa`, `vpd_kpa`
   - `solar_wm2_est`, `solar_mj_m2_h_est`
-  - `eto_mm_h_est`, `eto_mm_day_est`
+  - `eto_mm_h_est` using the FAO-56 hourly Penman-Monteith equation
+  - `eto_mm_day_est` as the observed local-day integral of the hourly rate
 - Computes status and recommendation fields:
   - `vpd_status`, `vpd_message`, `vpd_action`
   - `ph_status`, `ph_message`, `ph_action`
@@ -378,11 +379,56 @@ APP_HOST
 APP_PORT
 REFRESH_SECONDS
 TMD_ACCESS_TOKEN
+STATION_LATITUDE
+STATION_LONGITUDE
+STATION_ALTITUDE_M
+STATION_TIMEZONE
+WIND_SENSOR_HEIGHT_M
+LUX_PER_WM2
+ETO_MAX_GAP_MINUTES
 ```
 
 `TMD_ACCESS_TOKEN` ใช้เรียกข้อมูลพยากรณ์จากกรมอุตุนิยมวิทยาเป็นแหล่งหลัก
 หากไม่ได้ตั้งค่า, token หมดอายุ, TMD ตอบ error/timeout หรือไม่มีข้อมูล ระบบจะใช้
 Open-Meteo เป็นแหล่งสำรองและระบุแหล่งข้อมูลบนหน้า Dashboard
+
+### การคำนวณ ET0 แบบ FAO-56 รายชั่วโมง
+
+ระบบใช้สมการ FAO-56 Penman-Monteith สำหรับช่วงเวลารายชั่วโมง ซึ่งใช้ค่าคงที่
+`37` ไม่ใช่ค่าคงที่ `900` ของสมการรายวัน จากนั้นอินทิเกรตอัตรา `mm/hour`
+ตามช่วงเวลาระหว่างข้อมูลที่ได้รับ เพื่อสร้าง `eto_mm_day_est` แบบสะสมตั้งแต่
+เวลา 00:00 ของวันใน timezone ของสถานี
+
+ต้องกำหนดพิกัดจริงของสถานีใน `.env` ก่อน ระบบจึงจะคำนวณ ET0:
+
+```bash
+STATION_LATITUDE=<latitude ของสถานี>
+STATION_LONGITUDE=<longitude ของสถานี>
+STATION_ALTITUDE_M=<ความสูงจากระดับทะเล หน่วยเมตร>
+STATION_TIMEZONE=Asia/Bangkok
+WIND_SENSOR_HEIGHT_M=<ความสูงที่ติดตั้งเซนเซอร์ลม หน่วยเมตร>
+```
+
+ถ้าไม่ได้กำหนด latitude หรือ longitude ระบบจะเก็บ `eto_mm_h_est` และ
+`eto_mm_day_est` เป็น `null` แทนการแสดงค่าที่อาจทำให้เข้าใจผิด
+
+ข้อจำกัดที่ต้องระบุเมื่อใช้ในงานวิจัย:
+
+- รังสีดวงอาทิตย์ยังประมาณจาก lux โดยใช้ `LUX_PER_WM2` ค่าเริ่มต้น 120
+- ควรสอบเทียบค่า `LUX_PER_WM2` กับ pyranometer หรือสถานีอ้างอิงในพื้นที่
+- ความเร็วลมถูกปรับเป็นความสูงมาตรฐาน 2 เมตรตาม FAO-56 Equation 47
+- หากข้อมูลขาดช่วงนานกว่า `ETO_MAX_GAP_MINUTES` ระบบจะไม่ประมาณ ET0 เติมช่องว่าง
+- `eto_mm_day_est` จึงเป็นผลรวมเฉพาะช่วงเวลาที่มีข้อมูลเชื่อมต่อกัน ไม่ใช่ค่าที่เดาเติม
+
+ตรวจสอบสมการด้วยชุดทดสอบ:
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q
+```
+
+ชุดทดสอบอ้างอิง FAO-56 Example 19 ซึ่งให้ผล ET0 ช่วงกลางวันประมาณ
+`0.63 mm/hour`
 
 ### Data retention policy (local cache)
 
