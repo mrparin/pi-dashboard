@@ -4,12 +4,14 @@ import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, Literal
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.db import Database
@@ -73,6 +75,27 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["*"],
 )
+
+
+FRONTEND_OUT = Path(__file__).resolve().parent.parent / "frontend" / "out"
+if FRONTEND_OUT.is_dir():
+    # Serve the static Next.js export from the same origin as the API/WebSocket.
+    app.mount("/_next", StaticFiles(directory=FRONTEND_OUT / "_next"), name="next-static")
+
+
+@app.get("/", include_in_schema=False)
+async def dashboard() -> FileResponse:
+    if not (FRONTEND_OUT / "index.html").is_file():
+        raise HTTPException(status_code=503, detail="Frontend build not found")
+    return FileResponse(FRONTEND_OUT / "index.html")
+
+
+@app.get("/durian-orchard-banner.png", include_in_schema=False)
+async def dashboard_banner() -> FileResponse:
+    banner = FRONTEND_OUT / "durian-orchard-banner.png"
+    if not banner.is_file():
+        raise HTTPException(status_code=503, detail="Frontend banner not found")
+    return FileResponse(banner, media_type="image/png")
 
 
 @app.get("/api/health")

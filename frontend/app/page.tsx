@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import WeatherForecast from "./WeatherForecast";
 import HistoryCharts from "./HistoryCharts";
 import SensorIcon from "./SensorIcon";
+import AboutUs from "./AboutUs";
 
 type Reading = Record<string, number | string | null | undefined>;
 
@@ -64,7 +65,10 @@ export default function Home() {
     <main>
       <nav className="nav" aria-label="เมนูหลัก">
         <a className="brand" href="#top"><span>พ</span><strong>สวนพรรณมณี</strong></a>
-        <a className="nav-link" href="#dashboard">ดูข้อมูลแปลง</a>
+        <div className="nav-links">
+          <a className="nav-link" href="#dashboard">ดูข้อมูลแปลง</a>
+          <a className="nav-link" href="#about">About Us</a>
+        </div>
       </nav>
       <section className="hero" id="top">
         <p className="eyebrow">DURIAN FIELD STATION · 01</p>
@@ -90,6 +94,7 @@ export default function Home() {
       </section>
       <HistoryCharts />
       <WeatherForecast />
+      <AboutUs />
       <footer>
         <div className="footer-organization">
           <strong>คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยเทคโนโลยีราชมงคลธัญบุรี</strong>

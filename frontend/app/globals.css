@@ -22,6 +22,24 @@ body { margin:0; color:var(--ink); background:var(--paper); font-family:Arial,"N
 .forecast-day dl div { gap:3px; }
 .forecast-day dt { font-size:12px; line-height:1.35; }
 .forecast-day dd { font-size:14px; line-height:1.35; }
+.nav-links { display:flex; align-items:center; gap:28px; }
+.about { padding:82px clamp(24px,7vw,110px) 90px; background:#fffdf6; border-top:1px solid var(--line); }
+.about-heading { display:flex; justify-content:space-between; align-items:end; gap:30px; margin-bottom:34px; }
+.about-heading h2 { margin:0; font-family:Georgia,"Noto Serif Thai",serif; font-size:clamp(32px,4vw,52px); }
+.about-heading>p { max-width:460px; margin:0; color:#607167; line-height:1.65; }
+.staff-grid { display:grid; grid-template-columns:repeat(3,1fr); border-top:3px solid var(--ink); border-left:1px solid var(--line); }
+.staff-card { min-width:0; border-right:1px solid var(--line); border-bottom:1px solid var(--line); background:#eef1e7; }
+.staff-photo-wrap { aspect-ratio:4/3; overflow:hidden; background:var(--mist); }
+.staff-photo { display:block; width:100%; height:100%; object-fit:cover; object-position:center top; }
+.staff-content { padding:24px 22px 26px; }
+.staff-role { margin:0 0 9px; color:var(--soil); font-size:11px; font-weight:800; letter-spacing:.06em; }
+.staff-card h3 { min-height:52px; margin:0 0 15px; font-family:Georgia,"Noto Serif Thai",serif; font-size:23px; line-height:1.25; }
+.staff-duty { min-height:48px; margin:0; color:#607167; line-height:1.6; }
+.staff-duty strong { display:block; color:var(--ink); font-size:11px; letter-spacing:.08em; }
+.staff-contact { display:grid; gap:7px; margin-top:24px; padding-top:16px; border-top:1px solid var(--line); font-size:13px; }
+.staff-contact a { color:var(--ink); overflow-wrap:anywhere; }
+.about-source { margin:28px 0 0; color:#687b70; font-size:12px; }
+.about-source a { color:var(--soil); font-weight:700; }
 .sensor-icon { display:inline-grid; place-items:center; flex:0 0 auto; width:38px; height:38px; color:var(--soil); background:rgba(185,202,88,.18); border:1px solid rgba(119,75,42,.22); }
 .sensor-icon svg { display:block; width:24px; height:24px; }
 .metric-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:18px; }
@@ -41,6 +59,20 @@ footer small { color:#9fb3a5; font-size:11px; }
 @media (max-width:900px) { .metric-grid { grid-template-columns:repeat(3,1fr); }.hero { min-height:570px; background:var(--paper); }.field-line { width:52%; opacity:.35; }.section-head,.weather-heading { align-items:flex-start; flex-direction:column; }.trends-heading { grid-template-columns:1fr; row-gap:15px; }.weather-location { justify-items:start; text-align:left; }.location-cascade { grid-template-columns:1fr; }.location-cascade label { border-left:0; } }
 @media (max-width:560px) { .nav { height:62px; }.hero { min-height:535px; padding-top:75px; }.hero h1 { font-size:55px; }.lead { font-size:15px; }.field-line { right:-85px; width:65%; height:33%; }.metric-grid { grid-template-columns:repeat(2,1fr); }.metric { min-height:174px; padding:17px 14px; }.metric p { margin-bottom:20px; }.metric h3 { min-height:37px; font-size:13px; }.metric strong { font-size:38px; }.advice-grid { grid-template-columns:1fr; }.advice-grid article { padding:24px; }.dashboard,.trends,.weather { padding-top:58px; padding-bottom:58px; }.trend-card { padding-left:14px; padding-right:14px; }.weather-search>div { flex-direction:column; border-bottom:0; }.weather-search input { border-bottom:1px solid var(--line); }.weather-search button { min-height:48px; }.forecast-grid { display:flex; margin-right:-24px; overflow-x:auto; scroll-snap-type:x mandatory; border-left:0; }.forecast-day { flex:0 0 78vw; scroll-snap-align:start; border-left:1px solid var(--line); } }
 @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+
+@media (max-width:900px) {
+  .staff-grid { grid-template-columns:1fr; max-width:620px; }
+  .staff-photo-wrap { aspect-ratio:16/9; }
+}
+
+@media (max-width:560px) {
+  .nav { height:auto; min-height:62px; padding-top:12px; padding-bottom:12px; align-items:flex-start; }
+  .nav-links { gap:12px; flex-wrap:wrap; justify-content:flex-end; }
+  .nav-link { font-size:12px; }
+  .about { padding-top:58px; padding-bottom:58px; }
+  .about-heading { align-items:flex-start; flex-direction:column; }
+  .staff-content { padding-left:18px; padding-right:18px; }
+}
 
 /* The orchard itself leads the landing view; the paper wash preserves headline contrast. */
 .hero {
