@@ -28,8 +28,12 @@ THAI_LOCATION_DATA_URL = (
 thai_location_cache: list[dict[str, Any]] | None = None
 
 
-db = Database(settings.db_path)
-service = DataService(db)
+db = Database(
+    settings.db_path,
+    local_timezone=settings.station_timezone,
+    max_eto_gap_minutes=settings.eto_max_gap_minutes,
+)
+service = DataService(db, settings)
 mqtt_client = MqttIngestClient(settings, service)
 
 

@@ -5,8 +5,10 @@ import math
 import sqlite3
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 
 SCHEMA_SQL = """
@@ -51,10 +53,17 @@ logger = logging.getLogger(__name__)
 
 
 class Database:
-    def __init__(self, db_path: str) -> None:
+    def __init__(
+        self,
+        db_path: str,
+        local_timezone: str = "Asia/Bangkok",
+        max_eto_gap_minutes: int = 60,
+    ) -> None:
         self._db_path = Path(db_path)
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
+        self._timezone = ZoneInfo(local_timezone)
+        self._max_eto_gap_ms = max_eto_gap_minutes * 60 * 1000
         self._conn = self._open_connection()
         self._ensure_schema()
 
@@ -119,12 +128,53 @@ class Database:
         with self._lock:
             try:
                 with self._conn:
+                    self._accumulate_daily_eto(sample)
                     self._conn.execute(sql, sample)
             except sqlite3.DatabaseError as exc:
                 if not self._recover_if_malformed(exc):
                     raise
                 with self._conn:
+                    self._accumulate_daily_eto(sample)
                     self._conn.execute(sql, sample)
+
+    def _accumulate_daily_eto(self, sample: dict[str, Any]) -> None:
+        """Integrate the hourly ET rate to a local-day observed total."""
+        current_rate = sample.get("eto_mm_h_est")
+        if not isinstance(current_rate, (int, float)):
+            sample["eto_mm_day_est"] = None
+            return
+
+        row = self._conn.execute(
+            """
+            SELECT timestamp_ms, eto_mm_h_est, eto_mm_day_est
+            FROM samples
+            WHERE node = ? AND zone = ? AND timestamp_ms < ?
+            ORDER BY timestamp_ms DESC
+            LIMIT 1
+            """,
+            (sample["node"], sample["zone"], sample["timestamp_ms"]),
+        ).fetchone()
+        if row is None:
+            sample["eto_mm_day_est"] = 0.0
+            return
+
+        current_day = datetime.fromtimestamp(sample["timestamp_ms"] / 1000.0, self._timezone).date()
+        previous_day = datetime.fromtimestamp(row["timestamp_ms"] / 1000.0, self._timezone).date()
+        if current_day != previous_day:
+            sample["eto_mm_day_est"] = 0.0
+            return
+
+        previous_total = float(row["eto_mm_day_est"] or 0.0)
+        previous_rate = row["eto_mm_h_est"]
+        delta_ms = sample["timestamp_ms"] - row["timestamp_ms"]
+        if not isinstance(previous_rate, (int, float)) or not (0 < delta_ms <= self._max_eto_gap_ms):
+            sample["eto_mm_day_est"] = previous_total
+            return
+
+        delta_hours = delta_ms / 3_600_000.0
+        sample["eto_mm_day_est"] = previous_total + (
+            ((float(previous_rate) + float(current_rate)) / 2.0) * delta_hours
+        )
 
     def get_latest(self) -> dict[str, Any] | None:
         sql = "SELECT * FROM samples ORDER BY timestamp_ms DESC LIMIT 1"
