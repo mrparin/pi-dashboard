@@ -5,7 +5,7 @@ const staff = [
     duty: "ออกแบบ และพัฒนาระบบ",
     email: "parinya_j@rmutt.ac.th",
     phone: "02 549 4137, 4195",
-    image: "https://sci.rmutt.ac.th/wp-content/uploads/2022/07/Parinya-Jansongrat.jpg",
+    image: "/staff/parinya-jansongrat.jpg",
   },
   {
     name: "อาจารย์จริญญา ทะหลวย",
@@ -13,7 +13,7 @@ const staff = [
     duty: "ออกแบบระบบฐานข้อมูล",
     email: "jarinya_t@rmutt.ac.th",
     phone: "02 549 4137, 4195",
-    image: "https://sci.rmutt.ac.th/wp-content/uploads/2026/05/Jarinya-Thaloey.jpg",
+    image: "/staff/jarinya-thaloey.jpg",
   },
   {
     name: "ดร.ณัฎฐ์ ย่องหิ้น",
@@ -21,7 +21,7 @@ const staff = [
     duty: "วิเคราะห์ข้อมูลและโมเดล AI",
     email: "nat_y@rmutt.ac.th",
     phone: "02 549 4137, 4195",
-    image: "https://sci.rmutt.ac.th/wp-content/uploads/2026/04/NAT-YONGHINT.png",
+    image: "/staff/nat-yonghint.png",
   },
 ] as const;
 
